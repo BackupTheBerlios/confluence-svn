@@ -1,0 +1,45 @@
+Confluence Logic Design Language, Compiler, and Standard Library
+
+Copyright (C) 2003-2005 Tom Hawkins
+
+
+--------------------------
+Installation Instructions:
+--------------------------
+
+  1. Extract the installation:
+
+     $ tar -xzf confluence-0.10.0.tar.gz
+
+
+  2. Set the CF_LIB and CF_ENV environment variables
+     (add the following lines to .bashrc or .bash_profile):
+  
+     export CF_LIB=<path-to-confluence>/lib    # if binary distribution
+     export CF_LIB=<$PREFIX>/lib/confluence    # if installing from source
+     export CF_ENV=$CF_LIB/base.cf
+
+
+  3. Install OCaml (http://caml.inria.fr/ocaml/distrib.html).
+
+  4. Compile and install the tools.  Set the PREFIX location:
+
+       $ make PREFIX=/usr install
+
+  5. To compile and install the FNF Icarus code generator, see src/ivl/Makefile.
+
+
+-------------------
+Directory Contents:
+-------------------
+
+  INSTALL                     : This file.
+  LICENSE_GPL                 : License covering Confluence compiler.
+  LICENSE_LGPL                : License covering Confluence standard libraries.
+  NEWS                        : Release notes.
+  Makefile                    : The top level makefile to build the compiler and documentation.
+  lib/                        : Confluence base libraries and test suites.
+  misc/confluence.vim         : Vim syntax file for highlighting Confluence programs.
+  src/                        : Confluence compiler source.
+  src/doc                     : Source code documentation.
+

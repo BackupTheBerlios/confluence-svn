@@ -1,0 +1,868 @@
+Confluence Logic Design Language and Compiler
+
+Copyright (C) 2003-2005 Tom Hawkins
+
+
+Release Notes
+
+  * Denotes changes that impact backward compatibility.
+
+
+------------------------------------------------------------------------
+Confluence 0.10.2 -- 02/01/2005
+
+  - Added JHDL FNF code generator.  (Contributed by Nathan Cain)
+
+
+------------------------------------------------------------------------
+Confluence 0.10.1 -- 01/19/2005
+
+  - New syntax for naming local namespaces:
+
+    my_system = local a b c is (* ... *) end
+
+  - New syntax for naming instantiations.  The following are equivalent:
+
+    my_value  = {my_system : my_component arg1 arg2 $}
+
+    my_system = {my_component arg1 ang2 _}
+    my_value  = my_system.3
+
+  - FNF supports VHDL code generation.
+
+  - Outdated examples removed from distribution.
+
+
+------------------------------------------------------------------------
+Confluence 0.10.0 -- 01/07/2005
+
+  * Number of instantiation arguments must match number of component arguments.
+    Use _ to fill in the blanks:  {reg data_width _ _}
+
+  * FNF combined with Confluence installation.  Nls and Lp modules are removed.
+    CF now produces an FNF netlist.  Use FNF to generate C, Verilog, etc.
+
+  * Most command line options have changed or have been removed.
+
+  * The following primitives have been removed:
+      ram, rom, inout, tristate, join, header, assert, display
+
+  * ram_wbr, ram_rbw, and rom components are implemented with registers, decoders, and muxes.
+
+  * No support for VHDL or C code generation (temporary).
+
+  - Happy New Year!  Please share your good forturne with the
+    tsunami victims.  Donate today!
+
+
+------------------------------------------------------------------------
+Confluence 0.9.3 -- 10/12/2004
+
+  - The (') operater can be now used to create vector constants: wid'val
+
+  - The new -p option has been added to control port order.
+
+  - Added a new processor design (lib/designs/cpu/ttp).
+    Comes with an assembler and integrated memory model (in Python).
+    TTP is written in the pre 0.9 syntax, however.
+
+
+------------------------------------------------------------------------
+Confluence 0.9.2 -- 08/16/2004
+
+  - Updated lib/designs/arith to new syntax.
+    (Contribution by James Gilb)
+
+  * Added soft vectors.  Changes to inout, and added tristate and 
+    external_softvector.
+
+  - Added command line options (-o -m -g -t) to specify output code.
+    (Contribution by Aneesh Dalvi)
+
+  - Added "header" component to set header documentation.
+
+  * Removed "set" compiler directive component.
+
+  * Removed _c, _i, _o, and _b from generated port names.
+
+  * input, output, and inout no longer specifies port position.
+    Ports are sorted first by inputs, outputs, and inouts
+    then they are sorted alphabetically.
+
+  * Removed the older Base.cf standard library.
+
+  - Fixed the bug affecting large multipliers in the C code generator.
+
+
+------------------------------------------------------------------------
+Confluence 0.9.1 -- 07/21/2004
+
+  - Started adding command line options to cf.
+    Initial options include -help, -base_env, -compile_only, -error_limit.
+
+      cf -h  # For more info.
+
+  * The argv variable now contains only the arguments after
+    the main program file.  For example:
+
+      cf -compile_only program.cf one two three
+
+      argv = ["one" "two" "three"]
+
+  * Changed documentation comments from (# #)  to (** *).
+
+  * Discontinued cfdoc.
+
+  - Updated error reporting of free variables.  Reduces the 
+    error logging in most cases.  Also provides a free variable
+    dependency graph that is useful for debugging.
+
+  - Minor adjustments to runtime error reporting.  Fixed a bug that
+    reports a false error location during an unusual evaluation order.
+
+  - Removed hierarchical code generation to simplify the 
+    internal representation in preparation for new optimizations.
+    The compiler directive "LevelDensity" has been disabled.
+
+  - Recoded NuSMV XOR expressions to be compatible with SMV.
+
+  - Restructured primitive compilation.
+    Fixed bug with recursive records.
+
+  - Updated tutorial.
+
+  - Started aligning coding conventions with OCaml.
+
+  - Added constant propagation optimization for add and subtract.
+
+
+------------------------------------------------------------------------
+Confluence 0.9.0 -- 03/20/2004
+
+
+  - Confluence is Open Source
+  
+    The Confluence compiler is now licensed under GNU GPL and
+    The standard libraries are licensed under GNU LGPL.
+
+
+  - New Distribution Format
+  
+    See INSTALL for the new installation instructions.
+
+
+  - New Base Environment (base.cf)
+
+    The new base environment (base.cf) conforms to the new
+    coding conventions.  Base.cf, still distributed in lib,
+    is depreciated.
+
+   
+  - New Digital Logic Simulator
+
+    The C code generator includes a wrapper around the standard Confluence
+    C API to produce implement simulation executables.  External
+    verification environments communicate with the simulator using
+    Unix pipes (stdin, stdout).  A simple command language provides
+    means to initialize models, set and query port signals, cycle
+    clock domains, and control VCD recording.
+
+    The following is an example of the simulator command language:
+
+      # Comments are part of the command language.
+
+      !                  # Initialize model.
+      [ vcd_file.dmp     # Start recording to VCD.
+      $ input_1_i 011A   # Set input_1 to 0x011A.
+      @                  # Perform combinatorial calculation.
+      ? output_2_o       # Query the value of output_2_o.
+      ~ clock_c          # Cycle the clock_c domain.
+      |                  # Sample the port data to VCD.
+      ]                  # Close the dump file.
+
+    Queried port values come back on stdout; one hex value per line.
+
+    The new directive {set "CompileC" true} compiles the 
+    resulting C code for you, so a post GCC step is not needed.
+
+    The simulator is compatible with the "EmbeddedC" directive.
+
+
+  - Python and Java Code Generation Discontinued
+
+    Due to the power and flexibility of the new simulator,
+    there is no longer a need for multiple general purpose
+    programming language targets.
+
+    The simulation command language makes it trivial to connect
+    Python, Java, Perl, or any other high level language
+    to a Confluence simulator.  And unlike generated Python
+    or Java models, you get simulation performance of compiled C.
+
+
+  - cfdoc: Confluence Auto-Documentation
+
+    Cfdoc generates HTML documentation from CF source code comments.
+
+    Cfdoc searches a directory tree for CF source code
+    and assembles a network of hyperlinked pages documenting
+    the directory structure and the CF source code.
+
+    Source code documentation comments are valid at the beginning
+    of every file and before each named component definition.
+    A documentation comment has the form:
+
+      (# This is a doc comment. #)
+
+    In addition to doc comments, special doc files ("__cfdoc__")
+    may be placed in each directory to comment particular nodes
+    in the source tree.
+
+    Cfdoc synopsis:
+
+      cfdoc [-h] [-i <src_dir>]
+
+    NOTE: <src_dir> and <src_dir>/doc must already exist.
+    Cfdoc must be invoked in the parent directory of <src_dir>.
+
+
+  - Referencing System Environment Variables for Imports
+  
+    New syntax for import and environment strings provides 
+    means to access system environment variables.  This enables
+    users to make absolute path reference across a source
+    tree, regardless of where the source tree is installed
+    in the file system.
+
+    For example, if the environment variable DSP_PROJECT is set to
+    "/home/joe/dsp_project", the following import:
+      
+        import "$DSP_PROJECT/common/fir_filter.cf"
+
+    actually references "/home/joe/dsp_project/common/fir_filter.cf".
+
+    Environment variables may only be used at the beginning of a 
+    reference string.  The environment variable must be an absolute path.
+
+
+  - New RAM Model
+  
+    The new ram component produces independent write and read port components.
+
+    Example:
+
+      {ram +data_width +data_values -write_port -read_port}
+      {write_port +write_addr +write_data}
+      {read_port +read_before_write +read_addr -read_data}
+
+    Notice the write_port does not have an explicit write_enable --
+    it uses the implicit enable.
+
+    data_values is a list of integers that specify the RAM's
+    initial conditions.
+
+    NOTE: RAM initialization may not be supported by synthesis.
+    Check with your EDA vendor.
+
+
+  - New Property Datatype
+
+    Properties will enable designers to specify system properties
+    in the form of propositional temporal logic, for formal
+    verification and simulation monitoring.
+
+    Several linear-time temporal logic (LTL) operators have been
+    introduced, with more to follow.  Property assertions will be
+    supported in a future release.
+
+    Example:  "a implies b on the next clock cycle"
+
+      property = a `->` `X` b
+
+
+  - Promela Code Generation Discontinued
+
+    Symbolic model checking is superior to explicit state
+    model checking for digital logic verification.  
+    NuSMV, an open-source symbolic model checking language,
+    has continued support.
+
+
+  - Variable names may begin with a lower case letter.
+
+
+  - ASCII encoded characters are now specified with @A.
+    cA is no longer supported due to potential conflicts
+    with lowercase variable names.
+
+
+  - Assertions no longer have severity levels.
+
+      {assert "Check a == a." (a '==' b)}
+
+
+  - Generated C sends assertions and print messages to stderr.
+
+
+  - Digital Signal Recorder (dsr) has been discontinued.
+
+
+  - Removed (ports) unary operator.
+    Use ports_of_system to retrieve system port records.
+
+
+  - Bug fix in addition and subtraction primitives.
+
+
+  - The CF_BASE_ENVIRONMENT environment variable has
+    been renamed to CF_ENV.  CF_LIB is an optional environment
+    variable used for absolute references to the standard library:
+
+      import "$CF_LIB/base.cf"
+
+
+  - Removed (\) operator.
+
+
+  - Strings may span multiple lines.
+
+
+
+------------------------------------------------------------------------
+Confluence 0.8.0 -- 01/17/04
+
+  - New NuSMV code generator.  Enable with {Set "GenNuSmv" true}.
+    NuSMV is a state of the art open source symbolic model checker
+    for formal verification.  Symbolic model checking is more efficient
+    for digital logic verification than explicit model checking (SPIN).
+
+    NuSMV can verify stand-alone models.  Therefore "GenTestBench"
+    has no effect for NuSMV model generation.
+
+    NuSMV is licensed under LGPL and can be downloaded at:
+
+      http://nusmv.irst.itc.it/
+
+  - New XML netlist generator.  Enable with {Set "GenXml" true}.
+    XML netlists are used for building custom back-end Confluence
+    code generators for analysis tools, alternative output languages,
+    visulatization, or synthesis.  The Confluence netlist DTD is located at:
+     
+      http://www.launchbird.com/misc/confluence_netlist.dtd
+
+  - New C coding style to limit use of multiplications
+    for improved embedded performance.
+
+  - SystemToString in Base.cf now includes port record information.
+
+
+------------------------------------------------------------------------
+Confluence 0.7.7 -- 12/22/03
+
+  - New record data structure to map names to values.
+    Records are created with the following syntax:
+
+      NewRecord   = (Name1:Value1 Name2:Value2)
+      EmptyRecord = ()
+
+    Names must be unique within a record.
+    Also, name order determines type.
+    For example:
+
+      (A:1 B:2) == (A:1 B:2)
+      (A:1 B:2) != (B:2 A:1)
+    
+    Like system ports, record fields can be accessed either by
+    name or position using the (.) operator:
+
+      Record.Name
+      Record.1
+
+    IsRecord and RecordInfo are two new primitives added to Base.cf for records.  
+    Given a record, RecordInfo returns a list of records detailing the input record:
+
+      {RecordInfo (A:1 B:2) $} == [(Name:"A" Value:1) (Name:"B" Value:2)]
+
+    Base.cf also includes RecordToString with a tie-in to ToString and Show
+    for printing and debugging record values.
+      
+  - New prefix operator (ports), returns a record of a system's port values.
+
+      PortRecord = ports SomeSystem
+
+  - Lists are no longer a built in type.
+    Instead, they are built from records.  For example:
+
+      [] == ()
+      [1 2] == 1 :: 2 :: [] == (Head:1 Tail:(Head:2 Tail:()))
+
+  - Depreciated syntax for conditional operator (? :) and vector
+    switch operator ('?' ':').  New syntax is as follows:
+
+      Predicate then TrueExpr else FalseExpr
+
+      SelectBit 'then' TrueVector 'else' FalseVector
+
+  - New Confluence distribution with OCaml bytecode executables
+    allowing Confluence to run on any system supported by
+    Objective Caml (Unix, Mac, Windows, Cygwin).
+    Download OCaml, including the abstract machine, at:
+
+      http://www.ocaml.org/
+    
+    Also, removed deep recursion in compiler that caused stack overflows
+    in the OCaml abstract machine.
+
+  - Bug fix effecting type error reporting of a recursive data structures.
+
+  - Direction markers (+ - *) can prefix instantiation arguments.
+
+  - Renamed "VcdSupport" code generation constraint to "EmbeddedC".
+    When "EmbeddedC" is set, C code is generated for 
+    embedded applications, i.e. no VCD support or printfs from 
+    assertions or vector prints.  "EmbeddedC" defaults to false.
+
+  - VectorPrint primitive now supported in Java models.
+    Fixed comparison bugs in Java models.
+    Though VCD is still not supported, Java test-benches
+    make correct use of the limited Java model API.
+
+
+------------------------------------------------------------------------
+Confluence 0.7.6 -- 12/09/03
+
+  - The compiler now implements unification for all variable binding.
+    Any pair of values can be unified.  However, unifying two systems
+    or two vectors will result in a unification error unless the instances
+    are the same.
+
+  - New unification operator (=).  (=) has the same semantics as (<-) and (->).  
+    The follow are equivalent:
+
+      A <- B   (* Direction is ignored by compiler. *)
+      A -> B
+      A = B
+
+  - Lists can be constructed with free variables.  Example:
+
+      local A B C is
+        [A B C] = [1 2 3]
+        {Show A}  (* 1 *)
+        {Show B}  (* 2 *)
+        {Show C}  (* 3 *)
+      end
+
+      List = [List]    (* Data structures can be recursive. *)
+
+  - Free variables can be created anywhere using _.
+
+  - Component port direction markers (+ - *) are optional.
+    The markers should indicate the following:
+
+      +Port : All information produced outside component.
+      -Port : All information produced inside component.
+      *Port : Information produced both inside and outside component.
+
+  - Commas in instantiations are depreciated and will be 
+    removed from future releases.
+
+  - To support direction markers with instantiation arguments,
+    argument expressions and bracketed list elements are restricted
+    to non-operator expressions.  For example:
+
+      {SomeComp A B C + D}    (* Invalid. *)
+      {SomeComp A B (C + D)}  (* Valid. *)
+
+      {Print head List}       (* Invalid. *)
+      {Print (head List)}     (* Valid. *)
+
+      [A B C + D]             (* Invalid. *)
+      [A B (C + D)]           (* Valid. *)
+
+    The exceptions to the rule are (.) and ('):
+
+      {SomeComp Sys.Port Vector'Bits}
+
+    The current compiler does not accept direction markers with
+    arguments due to possible ambiguities with legacy Confluence
+    code.  Argument direction markers will be supported in the
+    next release.  For example:
+
+      {SomeComp +Input1 +Input2 -Output3 +Input4 *Multi5}
+
+  - The dot operator (.) now references ports by either name or position.
+    For position references, the right side must be an integer.
+    The at operator (@) has been removed.
+    
+      Sys.PortName  (* By name. *)
+      Sys.1         (* By position. *)
+
+  - Keyword "is" is required at the top of a file between the 
+    external ports and statements.
+
+  - Removed ListHead and ListTail primitives from Base.cf.
+
+  - New VCD utility:  Digital Signal Recorder (DSR).
+    DSR generates VCD from a simplified input language.
+    DSR is intended to be used with C, Java, Python, or other 
+    models to record simulation waveforms.
+    
+      $ dsr -h    # For more information.
+
+
+------------------------------------------------------------------------
+Confluence 0.7.5 -- 12/01/03
+
+  - Implemented free variable error reporting that provides
+    complete visibility.  No more "combinatorial loop" errors.
+
+  - New Java code generator.  Enable with {Set, "GenJava" true}.
+    Currently does not support VecPrint, VecExtSequ, or VecExtComb primitives.
+    Currently no VCD methods.
+
+  - Added association list components to Base.cf.
+    Association lists are lists of Key/Value pairs. 
+
+  - Updated TruthTable implementation to make efficient
+    use of input dont-cares.
+
+  - Replaced `operator syntax with (operator) for better legibility.
+
+  - Removed optional "then" keyword from "if ef else" statements.
+
+  - Added "with" and "is" keywords and new syntax for components and namespaces.
+    
+    Component Definitions:
+
+      component Add +A +B -X is
+        X <- A + B
+      end
+
+      comp +A +B -X is X <- A + B end
+
+    Explicit Namespace:
+
+      local Tmp1 Tmp2 is
+        (* ... *)
+      end
+
+    Implicit Namespace:
+    
+      component Comp +A -X with Tmp1 Tmp2 is
+        (* ... *)
+      end
+
+      comp +A -X with Tmp1 Tmp2 is (* ... *) end
+
+      if Check1 with Tmp1 Tmp2 is
+        (* ... *)
+      ef Check2 with Tmp3 Tmp4 is
+        (* ... *)
+      else with Tmp5 Tmp6 is
+        (* ... *)
+      end
+
+    Colon syntax (:Name) and component definitions without "is"
+    are depreciated and will not be supported in future releases.
+
+
+------------------------------------------------------------------------
+Confluence 0.7.4 -- 11/14/03
+
+  - The new primitive VectorRam implements true multi-port memories.
+    Given an address and data width, VectorRam returns a component
+    (RamPort) to implement the RAM's port interface.  RamPort my be
+    instantiated multiple times and across separate clock domains.
+
+    VectorRamRbw and VectorRamWbr have been redefined in terms of
+    VectorRam.  Their prior interfaces and semantics have been maintained.
+
+  - Fixed a corner case bug in the pre-runtime compiler.
+    The bug prevented the completion of computation in the case when an
+    output instantiation expression is a source for that system's output.
+
+
+------------------------------------------------------------------------
+Confluence 0.7.3 -- 10/31/03
+
+  - Bug fix to VectorReg in C code generator.
+
+
+------------------------------------------------------------------------
+Confluence 0.7.2 -- 10/28/03
+
+  - Added the capability to instantiate external components into 
+    Confluence for such tasks as 3rd party IP integration,
+    building custom logic primitives, and instantiating FPGA specific blocks.
+    
+    Two new logic primitives are added to the language to support external
+    component instantiation.  Given a component name, an integer list of
+    parameters, an input vector, and an output width, VectorExtComb and
+    VectorExtSequ instantiates external combinatorial and sequential
+    components. 
+    
+    Base.cf also defines ExternalCombinatorialComponent and 
+    ExternalSequentialComponent built on top of VectorExtComb
+    and VectorExtSequ to package and deliver reusable components.
+    
+    External instantiations are supported in Confluence generated
+    Verilog, VHDL, C, and Python.
+
+  - Added "ExternalC" and "ExternalPython" code generation constraints.
+    Both constraints are used to insert custom C and Python code, primarily
+    to support external component instances, i.e., including external
+    header files and import statements.
+
+  - Changed VHDL coding of VectorMul.  Uses ieee.numeric_std.resize 
+    to truncate most significant bits.
+
+
+------------------------------------------------------------------------
+Confluence 0.7.1 -- 10/23/03
+
+  - Consolidated List.cf and Logic.cf into Base.cf.
+    Program files no longer need to specify an environment if
+    Base.cf, List.cf, or Logic.cf was previously referenced.
+    The path to the implicit base environment is specified by the
+    system environment variable CF_BASE_ENVIRONMENT.
+    The new keyword "rootenvironment", when used
+    at the top of a program file, tells the compiler the file 
+    has no parent environment.
+
+  - Simplified installation to a basic tarball (confluence-X.X.X-pc-linux.tar.gz).
+    The Cygwin version can be downloaded using Internet Explorer.
+
+  - No longer uses a license server daemon; cfld removed from installation.
+
+
+------------------------------------------------------------------------
+Confluence 0.7.0 -- 10/10/03
+
+  - Confluence now compiles into the Promela language for formal verification
+    and random simulation using the open-source SPIN Model Checker.
+    Promela code generation is enabled by setting {Set, "GenPromela" true}.
+    In addition, Promela test-benches are also generated with
+    {Set, "GenTestBench" PosNum}.  Unlike Verilog, VHDL, C,
+    and Python test-benches, Promela test-benches may include 0, 1, or 
+    more clock domains, and may also include input and inout ports.
+    The "examples/spin" directory includes a demonstration of Confluence + SPIN
+    that performs equivalence checking between a golden and faulty model.
+    See the Confluence reference manual for the Promela API.
+    For more info on SPIN see http://spinroot.com/.
+
+  - Redefined semantics of VectorMul logic primitive so input operands
+    and result have same width.  Removed VectorMulS primitive.
+    Defined operators '*' and '*+' in terms of VectorMul so they have
+    their prior semantics (inputs may have different widths, result width
+    is sum of input widths).
+
+  - To ease code coverage requirements for hard-real-time software,
+    removed all if statements, conditional operators (?:),
+    and short circuit operators (&&, ||) from computation part of 
+    generated C code.
+
+  - Moved VectorConst calculation into initialization functions in
+    generated C/Python to improve execution time.
+
+  - Added -c switch to ba2cf to generate coverage metrics.
+
+
+------------------------------------------------------------------------
+Confluence 0.6.5 -- 09/16/03
+
+  - ba2cf completed.  Generates CF StateMachines for assertion based verification.
+  - Bug fix to VectorToHex.
+
+
+------------------------------------------------------------------------
+Confluence 0.6.4 -- 09/08/03
+
+  - Prevents free variable output error message if other error were produced.
+  - ROMs are extended with 0s to fill complete address space.
+  - RAMs are initialized to 0 in Verilog and VHDL.
+  - Created VectorPrint for printing vectors as ASCII encoded string
+    in output code.
+  - Added StringToVector, VectorToBin, and VectorToHex, vector string
+    manipulation components.
+
+
+------------------------------------------------------------------------
+Confluence 0.6.3 -- 08/26/03
+
+  - Introduced free variable output port counter to catch combinatorial loops.
+  - Bug fix in error reporting.  Now traps invalid input names for Dot sink expressions.
+  - Added "#ifdef __cplusplus" guard to output C header file.
+  - Added "VcdSupport" code generation constraint.  Controls if VCD functions
+    are added to output C code.
+  - Updated tutorial and example documentation to current language syntax.
+
+
+------------------------------------------------------------------------
+Confluence 0.6.2 -- 08/07/03
+
+  - cf defaults the license server ip address to 127.0.0.1 if CF_LICENSE_SERVER is not available.
+  - Bug fix for Switch logic primitive in VHDL generator.
+
+
+------------------------------------------------------------------------
+Confluence 0.6.1 -- 08/06/03
+
+  - All component inputs no longer required at instantiation time.
+    If inputs are left unconnected inputs must be bound using @ or . system operators.
+  - Dot (Sys.PortName) and At (Sys.PortNum) expressions are now valid at
+    sink expression position.
+  - New error reporting provides unconnected inputs information
+    including port name, component location, and instantiation location.
+
+
+------------------------------------------------------------------------
+Confluence 0.6.0 -- 08/04/03
+
+  - New documentation.  Includes XML source.
+  - Complete redefinition of operators.  See language reference manual for details.
+  - Added integer bitwise operations (<< >> ~ & ^ |).
+  - Updated UnitTest.cf unit testing framework.
+  - Added unit test suites for base libraries.  See lib/unit_testing.
+  - Renamed "signal" data-type to "vector".  Renaming and redefinition 
+    of several vector components.  See language reference manual and Base.cf for details.
+  - Additional integer constant syntax (0b101, 1b001).
+  - Additional vector constant syntax ('0b01', '1b00').
+  - New component definition statement.  See language reference manual for details.
+  - New Compile-time connection analysis and run-time checking
+    prevents "Free variables" and "Suspended threads" errors.
+  - Updated cf.vim with new syntax.
+  - All examples up to date.
+  - Removed keywords endif, endcomp, endprim, and endlocal.
+  - Redefined Assert for consistency with UnitTest.cf.
+
+
+------------------------------------------------------------------------
+Confluence 0.5.6 -- 07/19/03
+
+  - Integers now have arbitrary (infinitely large) precision.
+    - New hexadecimal notation for integer constants:
+        0xE = 14 : bits (inf,8] = 0
+        1xE = ~1 : bits (inf,8] = 1 (negative integer)
+    - Signal constants now accept hexadecimal notation:
+        '00110101' = '0x35' = '1x35' (sign bit has no affect)
+        Signal constants created with hex will have a width
+        with a multiple of 4.
+    - Variable names now may include underscores.
+      
+  cf.vim:
+
+    - Updated to support new integer and signal constants and
+      variable names.
+
+
+------------------------------------------------------------------------
+Confluence 0.5.5 -- 07/17/03
+
+  cf:
+  
+    - Removed "RegisterStyle" code generation constraint.
+    - Removed "VerilogVersion" code generation constraint.
+      All generated Verilog now conforms to Verilog-1995.
+    - Removed Optant logic primitive.
+    - Added Switch logic primitive (?:).
+    - Added "fileloc" keyword that returns a string
+      with file location information.
+
+  Base.cf:
+
+    - Removed "Length" name.  Use "length" operator for 
+      calculating the length of lists.
+    - Removed "Optant" component.
+    - Switch operator (?:) implemented with a Switch rather than an Optant.
+
+  Logic.cf:
+
+    - Mux and TruthTable implemented with Switches rather than Optants.
+
+  cf.vim:
+
+    - Added new "fileloc" keyword.
+
+
+------------------------------------------------------------------------
+Confluence 0.5.4 -- 07/02/03
+
+  ltl2ba:
+
+    - New binary translates linear-time temporal logics (LTL) to
+      Promela Buchi automata.  See opensrc/ltl2ba-1.0.
+
+  ba2cf:
+
+    - New binary parses results from ltl2ba.  Will eventually generate
+      Confluence logic to implement non-deterministic finite automata
+      produced from ltl2ba.
+
+
+------------------------------------------------------------------------
+Confluence 0.5.3 -- 06/26/03
+
+  cf:
+
+    - Raised precedence of list prefix operators (head, tail, length)
+      to the same level as signal prefix operators (not, msb, lsb,
+      msbs, lsbs, and width).
+
+  Base.cf:
+
+    - Added and defined `length operator.
+
+  cf.vim:
+
+    - Added "length" for keyword highlighting.
+
+
+------------------------------------------------------------------------
+Confluence 0.5.2 -- 06/19/03
+
+  cf:
+
+    - Increased compile-time debugging resolution and improved error messages.
+    - Changed Assert semantics to {Assert, TestSignal SeverityLevel Message}.
+      Assertion posts Message when TestSignal is low and halts simulation
+      if SeverityLevel is less than or equal to 0.
+    - Changed register primitives to have reset-over-enable priority.
+      Subsystem resets and enables follow the equations:
+        subsystem reset  = supersystem reset  OR  (OR  accumulation of local resets)
+        subsystem enable = supersystem enable AND (AND accumulation of local enables)
+      Note: Code generation constraint "RegisterStyle" currently does not affect 
+      register coding.
+
+  Base.cf:
+
+    - Updated Assert primitive.
+
+
+------------------------------------------------------------------------
+Confluence 0.5.1 -- 06/17/03
+
+  cfld:
+
+    - Bug fixes affecting Cygwin versions.  (Errors on stop action).
+    - Increased error reporting and license file status.
+
+
+------------------------------------------------------------------------
+Confluence 0.5.0 -- 06/10/03
+
+  cf:
+
+    - Bug fix to HDL code generators for assertions.
+    - Bug fix to VHDL assertion coding.
+    - Run-time error reporting returns instantiation locations
+      instead of component locations.
+    - Old HDL code generators have been removed.
+    - New signal map generator links HDL signal names to
+      Confluence file locations.  Enabled with "GenSignalMap" constraint.
+
+  cfld:
+
+    - Completely rebuilt license manager.
+      Type "cfld" and see above for usage information.
+      No update necessary, but highly recommended.
+

@@ -1,0 +1,358 @@
+(*
+    Confluence System Design Library
+    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+ 
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+environment "base.cf"
+
+nth
+take
+drop
+reverse
+flatten
+isolate
+transpose
+
+map
+map2
+fold_left
+fold_right
+tree
+iterate
+
+Assoc (*
+  find
+  member
+  add
+  remove
+  replace
+*)
+
+member
+satisfy_and
+satisfy_or
+
+find
+filter
+partition
+sort
+
+is
+
+
+(* List queries, selections, and transformations. *)
+
+(** Returns the nth element of a list.  Index starts at 0. *)
+component nth +list +n -ele is
+  if n < 0
+    {error "nth: List is too short."}
+  ef n == 0
+    ele = head list
+  else
+    ele = {nth (tail list) (n - 1) $}
+  end
+end
+
+(** Takes the first n elements of a list. *)
+component take +list +n -taken is
+  if n < 0 || list == [] && n > 0
+    {error "take: List is too short."}
+  ef n == 0
+    taken = []
+  else
+    taken = head list :: {take (tail list) (n - 1) $}
+  end
+end
+
+(** Drops the first n elements of a list. *)
+component drop +list +n -remaining is
+  if n < 0 || list == [] && n > 0
+    {error "drop: List is too short."}
+  ef n == 0
+    remaining = list
+  else
+    remaining = {drop (tail list) (n - 1) $}
+  end
+end
+
+(** Reverses the order of a list. *)
+component reverse +list -rev is
+  {fold_left comp +sofar +ele -new is new = ele :: sofar end [] list rev}
+end
+
+(** Flattens a list into a single list of non-list elements. *)
+component flatten +list_a -list_x is
+  if list_a == []
+    list_x = []
+  else with head_ tail_ is
+    head_ = head list_a
+    tail_ = {flatten (tail list_a) $}
+    if {is_list head_ $}
+      list_x = {flatten head_ $} ++ tail_
+    else
+      list_x = head_ :: tail_
+    end
+  end
+end
+
+(** Isolates each element of a list into a list of one element. *)
+component isolate +list_a -list_x is
+  if list_a == []
+    list_x = []
+  else
+    list_x = [(head list_a)] :: {isolate (tail list_a) $}
+  end
+end
+
+(** Matrix transpose (a matrix is a list of equal length lists). *)
+component transpose +list_a -list_x is
+  if length list_a == 0
+    {error "transpose: Requires non empty list."}
+  else with tail_ is
+    tail_ = tail list_a
+    if tail_ == []
+      list_x = {isolate (head list_a) $}
+    else
+      list_x = {map2 (::) (head list_a) {transpose tail_ $} $}
+    end
+  end
+end
+
+
+(* List iteration. *)
+
+(** Applies a unary operation across a list of elements. *)
+component map +unary_op +list_a -list_x is
+  if list_a == []
+    list_x = []
+  else
+    list_x = {unary_op (head list_a) $} :: {map unary_op (tail list_a) $}   (* XXX Make tail recursive. *)
+  end
+end
+
+(** Applies a binary operation across two lists of equal length. *)
+component map2 +binary_op +list_a +list_b -list_x is
+  if list_a == [] || list_b == []
+    list_x = []
+  else
+    list_x = {binary_op (head list_a) (head list_b) $} :: {map2 binary_op (tail list_a) (tail list_b) $}   (* XXX Make tail recursive. *)
+  end
+end
+
+(** Folds a binary operation across a list, from left to right.  Tail recursive. *)
+component fold_left +binary_op +start +elements -result is
+  if elements == []
+    result = start
+  else
+    result = {fold_left binary_op {binary_op start (head elements) $} (tail elements) $}
+  end
+end
+
+(** Folds a binary operation across a list, from right to left.  Not tail recursive. *)
+component fold_right +binary_op +elements +start -result is
+  if elements == []
+    result = start
+  else
+    result = {binary_op (head elements) {fold_right binary_op (tail elements) start $} $}
+  end
+end
+      
+(**
+  Applies a binary operation to a list of elements in a binary tree pattern.
+  When the list has an odd number of elements, the unary operation is applied.
+*)
+component tree +binary_op +unary_op +elements -result with rank tree0 is
+  component rank +a -x is
+    if a == []
+      x = a
+    ef length a == 1
+      x = {unary_op (head a) $} :: []
+    else
+      x = {binary_op {nth a 0 $} {nth a 1 $} $} :: {rank {drop a 2 $} $}
+    end
+  end
+
+  component tree0 +elements -result is
+    if elements == []
+      {error "tree: Input list needs at least one element."}
+    ef length elements == 1
+      result = head elements
+    else
+      result = {tree0 {rank elements $} $}
+    end
+  end
+
+  {tree0 elements result}
+end
+
+(** Applies a unit operation across a list of elements. *)
+component iterate +unit_op +elements is
+  if elements != []
+    {unit_op (head elements)}
+    {iterate unit_op (tail elements)}
+  end
+end
+
+
+(* Association lists. *)
+
+local find member add remove replace is
+
+  (** Finds a key, then returns a value of an association table. *)
+  component find +table +key -value is
+    if table == []
+      {error ("Assoc.find:  Key not found:  " ++ {string_of key [] $} ++ {string_of table [] $})}
+    else with row is
+      row = head table
+      if key == head row
+        {nth row 1 value}
+      else
+        {find (tail table) key value}
+      end
+    end
+  end
+
+  (** Checks if key is in association table. *)
+  component member +table +key -yes is
+    if table == []
+      yes = false
+    else with row is
+      row = head table
+      if key == head row
+        yes = true
+      else
+        {member (tail table) key yes}
+      end
+    end
+  end
+
+  (** Adds a key value pair to an association table. *)
+  component add +table +key +value -table_new is
+    table_new = [key value] :: table
+  end
+
+  (** Removes a key value pair from an association table. *)
+  component remove +table +key -table_new is
+    if table == []
+      table_new = []
+    else with row is
+      row = head table
+      if key == head row
+        table_new = tail table
+      else
+        table_new = row :: {remove (tail table) key $}  (* XXX Make tail recursive. *)
+      end
+    end
+  end
+
+  (** Replaces a key value pair in an association table. *)
+  component replace +table +key +value -table_new is
+    if table == []
+      table_new = [[key value]]
+    else with row is
+      row = head table
+      if key == head row
+        table_new = [key value] :: tail table   (* XXX Make tail recursive. *)
+      else
+        table_new = row :: {replace (tail table) key value $}
+      end
+    end
+  end
+
+  Assoc = (find:find member:member add:add remove:remove replace:replace)
+end
+
+
+(* List scanning. *)
+
+(** Checks if a list contains an element. *)
+component member +list +element -yes is
+  yes = {satisfy_or comp +a -x is x = a == element end list $}
+end
+
+(** Returns true iff all elements in the list satisfy the predicate. *)
+component satisfy_and +unary_predicate +list -yes is
+  if list == []
+    yes = true
+  else
+    yes = {unary_predicate (head list) $} && {satisfy_and unary_predicate (tail list) $}
+  end
+end
+
+(** Returns true iff any element in the list satisfies the predicate. *)
+component satisfy_or +unary_predicate +list -yes is
+  if list == []
+    yes = false
+  else
+    yes = {unary_predicate (head list) $} || {satisfy_or unary_predicate (tail list) $}
+  end
+end
+
+
+(* List searching, filtering, and sorting. *)
+
+(** Returns the first element in a list that satifies the predicate. *)
+component find +unary_predicate +list -element is
+  if list == []
+    {error "find:  Element not found in list."}
+  else with hd is
+    hd = head list
+    element = {unary_predicate hd $} then hd else {find unary_predicate (tail list) $}
+  end
+end
+
+(** Returns a list of elements that satisfy the predicate. *)
+component filter +unary_predicate +list_a -list_x is
+  if list_a == []
+    list_x = []
+  else with hd tl is
+    hd = head list_a
+    tl = {filter unary_predicate (tail list_a) $}
+    list_x = {unary_predicate hd $} then hd :: tl else tl
+  end
+end
+
+(** Paritions a list into two lists: elements that do, and do not satisfy the predicate. *)
+component partition +unary_predicate +list_a -list_true -list_false is
+  if list_a == []
+    list_true = list_false = []
+  else with hd tl_true tl_false is
+    hd = head list_a
+    {partition unary_predicate (tail list_a) tl_true tl_false}
+    if {unary_predicate hd $}
+      list_true  = hd :: tl_true
+      list_false =       tl_false 
+    else
+      list_true  =       tl_true
+      list_false = hd :: tl_false
+    end
+  end
+end
+
+(** Sorts a list given a comparison function. *)
+component sort +compare +list_a -list_x is
+  if list_a == []
+    list_x = []
+  else with hd tl top bottom is
+    hd = head list_a
+    tl = tail list_a
+    {partition comp +a -x is {compare a hd x} end tl top bottom}
+    list_x = {sort compare top $} ++ (hd :: {sort compare bottom $})
+  end
+end
+
+

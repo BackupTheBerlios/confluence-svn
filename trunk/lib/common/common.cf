@@ -1,0 +1,153 @@
+(*
+    Confluence System Design Library
+    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+ 
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+-latch_moore_set
+-latch_moore_reset
+-latch_mealy_set
+-latch_mealy_reset
+-toggle_moore
+-toggle_mealy
+-timer
+-interleaver
+-sequence
+-sim_start
+
+is
+
+(*
+BsdLic =
+"
+Copyright (C) 2003-2004 Tom Hawkins
+All rights reserved.
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+"
+*)
+
+component latch_moore_set +s +r -q is
+  {state_machine [(i:"00" s:"0" n:"0" o:"0")
+                  (i:"01" s:"0" n:"0" o:"0")
+                  (i:"10" s:"0" n:"1" o:"0")
+                  (i:"11" s:"0" n:"1" o:"0")
+                  (i:"00" s:"1" n:"1" o:"1")
+                  (i:"01" s:"1" n:"0" o:"1")
+                  (i:"10" s:"1" n:"1" o:"1")
+                  (i:"11" s:"1" n:"1" o:"1")] (s '++' r) q}
+end
+
+component latch_moore_reset +s +r -q is
+  {state_machine [(i:"00" s:"0" n:"0" o:"0")
+                  (i:"01" s:"0" n:"0" o:"0")
+                  (i:"10" s:"0" n:"1" o:"0")
+                  (i:"11" s:"0" n:"0" o:"0")
+                  (i:"00" s:"1" n:"1" o:"1")
+                  (i:"01" s:"1" n:"0" o:"1")
+                  (i:"10" s:"1" n:"1" o:"1")
+                  (i:"11" s:"1" n:"0" o:"1")] (s '++' r) q}
+end
+
+component latch_mealy_set +s +r -q is
+  {state_machine [(i:"00" s:"0" n:"0" o:"0")
+                  (i:"01" s:"0" n:"0" o:"0")
+                  (i:"10" s:"0" n:"1" o:"1")
+                  (i:"11" s:"0" n:"1" o:"1")
+                  (i:"00" s:"1" n:"1" o:"1")
+                  (i:"01" s:"1" n:"0" o:"0")
+                  (i:"10" s:"1" n:"1" o:"1")
+                  (i:"11" s:"1" n:"1" o:"1")] (s '++' r) q}
+end
+
+component latch_mealy_reset +s +r -q is
+  {state_machine [(i:"00" s:"0" n:"0" o:"0")
+                  (i:"01" s:"0" n:"0" o:"0")
+                  (i:"10" s:"0" n:"1" o:"1")
+                  (i:"11" s:"0" n:"0" o:"0")
+                  (i:"00" s:"1" n:"1" o:"1")
+                  (i:"01" s:"1" n:"0" o:"0")
+                  (i:"10" s:"1" n:"1" o:"1")
+                  (i:"11" s:"1" n:"0" o:"0")] (s '++' r) q}
+end
+
+component toggle_moore +t -q is
+  {state_machine [(i:"0" s:"0" n:"0" o:"0")
+                  (i:"1" s:"0" n:"1" o:"0")
+                  (i:"0" s:"1" n:"1" o:"1")
+                  (i:"1" s:"1" n:"0" o:"1")] t q}
+end
+
+component toggle_mealy +t -q is
+  {state_machine [(i:"0" s:"0" n:"0" o:"0")
+                  (i:"1" s:"0" n:"1" o:"1")
+                  (i:"0" s:"1" n:"1" o:"1")
+                  (i:"1" s:"1" n:"0" o:"0")] t q}
+end
+
+component timer +time +width_ +start -count -active -last with c match pre_active is
+
+  c = {counter width_ count}
+  match = count '==' {const width_ (time - 1) $}
+  {latch_mealy_set start match pre_active}
+  {reset  start      c}
+  {enable pre_active c}
+
+  active = {reg 1 pre_active $}
+  last  = active '&' match
+end
+
+component interleaver +DataWidth +Swap +Write +Addr +DataIn -SyncPrimary -SyncSecondary -DataOut -Mem0 -Mem1
+  with AddrWidth AddrOut LoadMem0 LoadMem1 is
+
+  AddrWidth = width Addr
+
+  {reset Swap {counter AddrWidth AddrOut}}
+  {toggle_moore Swap LoadMem1}
+  
+  LoadMem0 = '~' LoadMem1
+
+  SyncPrimary   = {reg 1 Swap $}
+  SyncSecondary = AddrOut '==' {zero AddrWidth $}
+
+  Mem0 = {ram_rbw DataWidth (Write '&' LoadMem0) Addr DataIn AddrOut _}
+  Mem1 = {ram_rbw DataWidth (Write '&' LoadMem1) Addr DataIn AddrOut _}
+
+  DataOut = {reg 1 LoadMem0 $} 'then' Mem1.read_data 'else'  Mem0.read_data
+end
+  
+component sequence +width_ +values +start -data with elements addr_width addr active is
+  elements = length values
+  {bits_required elements addr_width}
+  {timer elements addr_width start addr active _}
+  data = {reg 1 active $} 'then' {rom width_ values addr $} 'else' {zero width_ $}
+end
+
+component sim_start -start_flag is
+  start_flag = '~' {reg 1 '1' $}
+end
+
+
+

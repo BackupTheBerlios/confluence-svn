@@ -1,0 +1,43 @@
+(*
+    Confluence System Design Library
+    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+ 
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+(** Cross clock domain synchronization. *)
+
+synchronizer
+
+is
+
+(** See link for more info:  http://www.e-insite.net/ednmag/index.asp?layout=article&articleid=CA276202 *)
+component synchronizer +clk_src +clk_dst +start -take_it -got_it with
+  take_it_1 take_it_2 take_it_3
+  got_it_1  got_it_2  got_it_3  is
+
+  (* start to take_it. *)
+  {clock clk_src {reg 1 (start '^' take_it_1) take_it_1}}
+  {clock clk_dst {regs 1 2 take_it_1 take_it_2}}
+  {clock clk_dst {reg 1 take_it_2 take_it_3}}
+  take_it = take_it_2 '^' take_it_3
+
+  (* take_it back to got_it. *)
+  {clock clk_dst {reg 1 (take_it '^' got_it_1) got_it_1}}
+  {clock clk_src {regs 1 2 got_it_1 got_it_2}}
+  {clock clk_src {reg 1 got_it_2 got_it_3}}
+  got_it = got_it_2 '^' got_it_3
+end
+

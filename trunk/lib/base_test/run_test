@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Invoke Confluence.
+cf base_test.cf
+
+# Execute C simulator.
+#echo "! " | ./lib_unit_test
+
+# Compile and execute C test bench.
+#gcc -Wall -o lib_unit_test_c lib_unit_test_bench.c lib_unit_test.c
+#./lib_unit_test_c
+
+# Compile and execute Verilog.
+#iverilog -Wall -o lib_unit_test_v lib_unit_test_bench.v lib_unit_test.v
+#./lib_unit_test_v
+
+# Compile and execute VHDL.
+#ghdl -a lib_unit_test_bench.vhd lib_unit_test.vhd
+
+# Validate XML netlist.
+#xmllint -noout -valid lib_unit_test.xml
+
+# Clean up.
+#rm lib_unit_test*
+#rm work-obj93.cf
+rm out.fnf
+

@@ -1,0 +1,1433 @@
+(*
+    Confluence System Design Library
+    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+ 
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+rootenvironment
+
+
+(* General *)
+
+(==)
+(!=)
+error
+string_of
+show
+unify
+
+
+(* Components *)
+
+is_component
+string_of_component
+
+
+(* Systems *)
+
+is_system
+string_of_system
+ports_of_system
+
+
+(* Numbers (integers and floats) *)
+
+(<)
+(>)
+(<=)
+(>=)
+(+)
+(-)
+(*)
+(/)
+(**)
+
+(* Integers *)
+
+is_integer
+string_of_integer
+integer_of_string
+float_of_integer
+(%)
+(~)
+(&)
+(^)
+(|)
+(<<)
+(>>)
+range
+(:)
+binary_of_integer
+integer_of_binary
+bits_required
+
+
+(* Floats *)
+
+is_float
+string_of_float
+float_of_string
+integer_of_float
+ceil
+floor
+round
+exp
+log
+sqrt
+sin
+cos
+tan
+asin
+acos
+atan
+atan2
+e
+pi
+
+
+(* Booleans *)
+
+is_boolean
+string_of_boolean
+(!)
+
+
+(* Records *)
+
+is_record
+record_info
+string_of_record
+
+
+(* Lists *)
+
+is_list
+string_of_list
+print
+argv
+(head)
+(tail)
+(length)
+(++)
+(::)
+(#)
+
+List (*
+  nth
+  take
+  drop
+  reverse
+  flatten
+  isolate
+  transpose
+
+  map
+  mapi
+  map2
+  fold_left
+  fold_right
+  tree
+  iter
+  iteri
+
+  Assoc (*
+    find
+    member
+    add
+    remove
+    replace
+  *)
+
+  member
+  satisfy_and
+  satisfy_or
+
+  find
+  filter
+  partition
+  sort
+*)
+
+
+
+(* Vectors *)
+
+is_vector
+string_of_vector
+vector_of_string
+bin_of_vector
+hex_of_vector
+(width)
+clock
+reset
+enable
+assert
+input
+output
+inout
+display
+const
+one
+ones
+zero
+reg
+regs
+rom
+ram_wbr
+ram_rbw
+('~')
+('&')
+('^')
+('|')
+('then')
+tristate
+('++')
+('#')
+(')
+('==')
+('!=')
+('<')
+('>')
+('<=')
+('>=')
+('<+')
+('>+')
+('<=+')
+('>=+')
+('+')
+('-')
+('*')
+('*+')
+('<<')
+('>>')
+('>>+')
+('/')
+('%')
+('**')
+('msb')
+('msbs')
+('lsb')
+('lsbs')
+external_combinatorial
+external_sequential
+external_softvector
+list_of_bits
+all_bits_high
+all_bits_low
+all_bits_same
+mux
+counter
+decoder
+truth_table
+state_machine
+
+
+(* CTL* Properties *)
+is_property
+string_of_property
+(`!`)
+(`X`)
+(*
+(`G`)
+(`F`)
+*)
+(`&&`)
+(`^^`)
+(`||`)
+(`<->`)
+(`->`)
+(`U`)
+(*
+(`W`)
+(`B`)
+(`V`)
+*)
+sequence
+
+
+(* Abstract Data Types *)
+
+(*
+Map
+Set
+*)
+
+is
+
+
+(* General *)
+
+(** Compares any two values for equality. *)
+component (==) +a +b -is_equal is
+  {prim IsEqual a b is_equal end a b is_equal}
+end
+
+(** Compares any two values for inequality. *)
+component (!=) +a +b -is_not_equal is
+  is_not_equal = ! (a == b)
+end
+
+(** Raises an error and prevents code generation. *)
+component error +msg is
+  {prim Error msg end msg}
+end
+
+(** Converts any value to a string.  Handles recursive data structures. *)
+component string_of +value +sofar -str is
+  if {is_component value $} {string_of_component value str}
+  ef {is_integer   value $} {string_of_integer   value str}
+  ef {is_float     value $} {string_of_float     value str}
+  ef {is_boolean   value $} {string_of_boolean   value str}
+  ef {is_vector    value $} {string_of_vector    value str}
+  ef {is_property  value $} {string_of_property  value str}
+  ef {List.member sofar value $} str = "rec"
+  ef {is_list    value $} {string_of_list   value sofar str}
+  ef {is_record  value $} {string_of_record value sofar str}
+  ef {is_system  value $} {string_of_system value sofar str}
+  else
+    {error "string_of:  Unknown type."}
+  end
+end
+
+(** Prints any value to stdout. *)
+component show +value is
+  {print {string_of value [] $}}
+end
+
+(** Unifies two variables. *)
+component unify *value_a *value_b is
+  value_a = value_b
+end
+
+
+
+(* Components *)
+
+(** Checks if value is a component. *)
+component is_component +value -yes is
+  {prim IsComponent a x end value yes}
+end
+
+(** Converts a component to a string. *)
+component string_of_component +comp_value -str is
+  if !{is_component comp_value $}
+    {error "string_of_component: Value is not a component."}
+  else
+    str = "<component>"
+  end
+end
+
+
+(* Systems *)
+
+(** Checks if value is a system. *)
+component is_system +value -yes is
+  {prim IsSystem a x end value yes}
+end
+
+(** Returns the record of a system's ports. *)
+component ports_of_system system port_record is
+  {prim SystemPorts a x end system port_record}
+end
+
+(** Converts a system to a string. *)
+component string_of_system +system +sofar -str is
+  if !{is_system system $}
+    {error "string_of_system:  Value is not a system."}
+  else
+    str = "<system: " ++ {string_of_record {ports_of_system system $} (system :: sofar) $} ++ ">"
+  end
+end
+
+
+(* Numbers *)
+
+(** Less than comparison of integers or floats. *)
+component (<) +a +b -yes is
+  if {is_integer a $} && {is_integer b $}
+    {prim IntegerLt a b x end a b yes}
+  ef {is_float a $} && {is_float b $}
+    {prim FloatLt a b x end a b yes}
+  else
+    {error "(<):  Values are not integers or floats."}
+  end
+end
+
+(** Greater than comparison of integers or floats. *)
+component (>) +a +b -yes is
+  if {is_integer a $} && {is_integer b $} || {is_float a $} && {is_float b $}
+    yes = ! (a < b || a == b)
+  else
+    {error "(>):  Values are not integers or floats."}
+  end
+end
+
+(** Less than or equal comparison of integers or floats. *)
+component (<=) +a +b -yes is
+  if {is_integer a $} && {is_integer b $} || {is_float a $} && {is_float b $}
+    yes = a < b || a == b
+  else
+    {error "(<=):  Values are not integers or floats."}
+  end
+end
+
+(** Greater than or equal comparison of integers or floats. *)
+component (>=) +a +b -yes is
+  if {is_integer a $} && {is_integer b $} || {is_float a $} && {is_float b $}
+    yes = ! (a < b)
+  else
+    {error "(>=):  Values are not integers or floats."}
+  end
+end
+
+(** Integer or float addition. *)
+component (+) +a +b -x is
+  if {is_integer a $} && {is_integer b $}
+    {prim IntegerAdd a b x end a b x}
+  ef {is_float a $} && {is_float b $}
+    {prim FloatAdd a b x end a b x}
+  else
+    {error "(+):  Values are not integers or floats."}
+  end
+end
+
+(** Integer or float subtraction. *)
+component (-) +a +b -x is
+  if {is_integer a $} && {is_integer b $}
+    {prim IntegerSub a b x end a b x}
+  ef {is_float a $} && {is_float b $}
+    {prim FloatSub a b x end a b x}
+  else
+    {error "(-):  Values are not integers or floats."}
+  end
+end
+
+(** Integer or float multiplication. *)
+component (*) +a +b -x is
+  if {is_integer a $} && {is_integer b $}
+    {prim IntegerMul a b x end a b x}
+  ef {is_float a $} && {is_float b $}
+    {prim FloatMul a b x end a b x}
+  else
+    {error "(*):  Values are not integers or floats."}
+  end
+end
+
+(** Integer or float division. *)
+component (/) +a +b -x is
+  if {is_integer a $} && {is_integer b $}
+    {prim IntegerDiv a b x end a b x}
+  ef {is_float a $} && {is_float b $}
+    {prim FloatDiv a b x end a b x}
+  else
+    {error "(/):  Values are not integers or floats."}
+  end
+end
+
+(** Integer or float power. *)
+component (**) +a +b -x is
+  if {is_integer a $} && {is_integer b $}
+    {prim IntegerPow a b x end a b x}
+  ef {is_float a $} && {is_float b $}
+    {prim FloatPow a b x end a b x}
+  else
+    {error "(**):  Values are not integers or floats."}
+  end
+end
+
+
+(* Integers *)
+
+(** Checks if value is an integer. *)
+component is_integer +value -yes is
+  {prim IsInteger a x end value yes}
+end
+
+(** Converts and integer to a string. *)
+component string_of_integer +integer -str is
+  {prim IntegerToString a x end integer str}
+end
+
+(** Converts a string to an integer. *)
+component integer_of_string +str -integer is
+  {prim StringToInteger a x end str integer}
+end
+
+(** Converts an integer to a float. *)
+component float_of_integer +integer -float is
+  {prim IntegerToFloat a x end integer float}
+end
+
+(** Integer modulo. *)
+component (%) +a +b -x is
+  {prim IntegerMod a b x end a b x}
+end
+
+(** Integer bitwise NOT. *)
+component (~) +a -x is
+  {prim IntegerNot a x end a x}
+end
+
+(** Integer bitwise AND. *)
+component (&) +a +b -x is
+  {prim IntegerAnd a b x end a b x}
+end
+
+(** Integer bitwise XOR. *)
+component (^) +a +b -x is
+  {prim IntegerXor a b x end a b x}
+end
+
+(** Integer bitwise OR. *)
+component (|) +a +b -x is
+  {prim IntegerOr a b x end a b x}
+end
+
+(** Integer bitwise shift left. *)
+component (<<) +a +b -x is
+  {prim IntegerShiftLeft a b x end a b x}
+end
+
+(** Integer bitwise shift right. *)
+component (>>) +a +b -x is
+  {prim IntegerShiftRight a b x end a b x}
+end
+
+(** Returns a list of integers between a certain range (inclusive). *)
+component range +a +b -x is
+  x = a == b then [a]                      else
+      a <  b then a :: {range (a + 1) b $} else
+                  a :: {range (a - 1) b $} 
+end
+
+(:) = range
+
+(** Returns the number of bits required to represent a number of items. *)
+component bits_required +tally -bits is
+  if tally < 0
+    {error "bits_required: tally must be >= 0."}
+  ef tally == 0
+    bits = 0
+  ef tally == 1
+    bits = 1
+  else
+    bits = {integer_of_float {ceil ({log {float_of_integer tally $} $} / {log 2.0 $}) $} $}
+  end
+end
+
+local binary_of_integer0 is
+  component binary_of_integer0 +value +width_ +bin_in -bin_out is
+    if width_ <= 0
+      bin_out = bin_in
+    else
+      bin_out = {binary_of_integer0 (value / 2) (width_ - 1) ((value % 2 == 1 then "1" else "0") ++ bin_in) $}
+    end
+  end
+
+  (** Converts an integer into a binary string. *)
+  component binary_of_integer +value +width_ -binary is
+    if width_ < 0
+      {error "binary_of_integer:  width_ must be >= 0."}
+    else
+      {binary_of_integer0 value width_ "" binary}
+    end
+  end
+end
+
+local integer_of_binary0 is
+  component integer_of_binary0 +binary +factor +value_in -value_out is
+    if binary == ""
+      value_out = value_in
+    else
+      value_out = {integer_of_binary0 (tail binary) (factor * 2) (head binary == @1 then value_in + factor else value_in) $}
+    end
+  end
+
+  (** Converts a binary string into an integer. *)
+  component integer_of_binary +binary -integer is
+    {integer_of_binary0 {List.reverse binary $} 1 0 integer}
+  end
+end
+
+
+
+(* Floats *)
+
+(** Checks if value is a float. *)
+component is_float +value -yes is
+  {prim IsFloat a x end value yes}
+end
+
+(** Converts a float to a string. *)
+component string_of_float +float -str is
+  {prim FloatToString a x end float str}
+end
+
+(** Converts a string to a flost. *)
+component float_of_string +str -float is
+  {prim StringToFloat a x end str float}
+end
+
+(** Converts a float to an integer. *)
+component integer_of_float +float -integer is
+  {prim FloatToInteger a x end float integer}
+end
+
+(** Rounds a float up to the nearest integer (float type returned). *)
+component ceil +a -x is
+  {prim FloatCeil a x end a x}
+end
+
+(** Rounds a float down to the nearest integer (float type returned). *)
+component floor +a -x is
+  {prim FloatFloor a x end a x}
+end
+
+(** Rounds a float to the nearest integer (float type returned). *)
+component round +a -x with t is
+  {floor a t}
+  x = a - t <= 0.5 then t else {ceil a $}
+end
+
+(** Exponent. *)
+component exp +a -x is
+  {prim FloatExp a x end a x}
+end
+
+(** Natural log. *)
+component log +a -x is
+  {prim FloatLog a x end a x}
+end
+
+(** Square root. *)
+component sqrt +a -x is
+  x = a ** 0.5
+end
+
+(** Sine of radians. *)
+component sin +a -x is
+  {prim FloatSin a x end a x}
+end
+
+(** Cosine of radians. *)
+component cos +a -x is
+  {prim FloatCos a x end a x}
+end
+
+(** Tangent of radians. *)
+component tan +a -x is
+  {prim FloatTan a x end a x}
+end
+
+(** Arc sine. *)
+component asin +a -x is
+  {prim FloatAsin a x end a x}
+end
+
+(** Arc cosine. *)
+component acos +a -x is
+  {prim FloatAcos a x end a x}
+end
+
+(** Arc tangent. *)
+component atan +a -x is
+  {prim FloatAtan a x end a x}
+end
+
+(** Arc tangent2. *)
+component atan2 +rise +run -x is
+  {prim FloatAtan2 a b x end rise run x}
+end
+
+(* Exponent e. *)
+e  = {exp 1.0 $}
+
+(* PI. *)
+pi = {acos -1.0 $}
+
+
+(* Booleans *)
+
+(** Checks if value is a boolean. *)
+component is_boolean +value -yes is
+  {prim IsBoolean a x end value yes}
+end
+
+(** Converts a boolean to a string. *)  
+component string_of_boolean +boolean -str is
+  if !{is_boolean boolean $}
+    {error "string_of_boolean:  Value is not a boolean."}
+  else
+    str = boolean then "true" else "false"
+  end
+end
+  
+(** Boolean negation. *)
+component (!) +a -x is
+  {prim BooleanNot a x end a x}
+end
+
+
+(* Records *)
+
+(** Checks if value is a record. *)
+component is_record +value -yes is
+  {prim IsRecord a x end value yes}
+end
+
+(** Record information.  A list of (name: value:). *)
+component record_info +record -info is
+  {prim RecordInfo a x end record info}
+end
+
+(** Converts a record to a string. *)
+component string_of_record +record +sofar -str with f sofar0 is
+  sofar0 = record :: sofar
+  component f +pairs -str is
+    if pairs == []
+      str = ""
+    else with h t is
+      h :: t = pairs
+      str = h.name ++ ":" ++ {string_of h.value sofar0 $} ++ (t == [] then "" else " " ++ {f t $})
+    end
+  end
+  str = "(" ++ {f {record_info record $} $} ++ ")"
+end
+
+ 
+(* Lists *)
+  
+(** Checks if value is a list. *)
+component is_list +value -yes is
+  {prim IsList a x end value yes}
+end
+  
+(** Converts a list to a string. *)
+component string_of_list +list +sofar -str with sofar0 string_of_elements is
+  sofar0 = list :: sofar
+  component string_of_elements +es -str is
+    if es == []
+      str = []
+    ef tail es == []
+      str = {string_of (head es) sofar0 $}
+    else
+      str = {string_of (head es) sofar0 $} ++ " " ++ {string_of_elements (tail es) $}
+    end
+  end
+  str = "[" ++ {string_of_elements list $} ++ "]"
+end
+
+(** Prints a string to stdout. *)
+component print +str is
+  {prim ListPrint a end str}
+end
+
+(* Command line arguments. *)
+argv = {prim ListArgv -Args end $}
+
+(** Returns the first element of a list (head). *)
+component (head) +list -hd is
+  hd = list.hd
+end
+
+(** Returns the list without the first element (tail). *)
+component (tail) +list -tl is
+  tl = list.tl
+end
+
+(** Returns the length of a list. *)
+component (length) +list -len is
+  {List.fold_left comp +count +ele +total is total = count + 1 end 0 list len} 
+end
+
+(** Creates a new list by added an element in front of an existing list (cons). *)
+component (::) *hd *tl *list is
+  list = (hd:hd tl:tl)
+end
+
+(** Concatenates two lists together. *)
+component (++) +a +b -x is
+  if a == []
+    x = b
+  else
+    x = head a :: {(++) (tail a) b $}
+  end
+end
+
+(** Repeated list concatenation. *)
+component (#) +list_in +count -list_out with f is
+  component f +list +count -list_out is
+    if count <= 0
+      list_out = list
+    else
+      list_out = {f (list ++ list_in) (count - 1) $}
+    end
+  end
+  {f [] count list_out}
+end
+
+(* Common list functions. *)
+List = import "list.cf"
+
+
+(* Vectors *)
+
+(** Checks if value is a vector. *)
+component is_vector +value -yes is
+  {prim IsVector a x end value yes}
+end
+
+(** Converts a vector to a string.  Width information included. *)
+component string_of_vector +vec -str is
+  if !{is_vector vec $}
+    {error "string_of_vector:  Value is not a vector."}
+  else
+    str = "<vector: " ++ {string_of_integer (width vec) $} ++ ">"
+  end
+end
+
+local f is
+  component f +str +vec_in -vec_out is
+    if str == ""
+      vec_out = vec_in
+    else
+      vec_out = {f (tail str) (vec_in '++' {const 8 (head str) $}) $}
+    end
+  end
+  (** Converts a string to an ASCII encoded vector. *)
+  component vector_of_string +str -vec is
+    {f str '' vec}
+  end
+end
+
+(** Converts a vector into a ASCII bin vector. *)
+component bin_of_vector +vec -vec_bin is
+  if width vec <= 0
+    vec_bin = ''
+  else
+    vec_bin = ('msb' vec 'then' {const 8 @1 $} 'else' {const 8 @0 $}) '++' {bin_of_vector ('lsbs' vec) $}
+  end
+end
+
+local hex_of_nib is
+  component hex_of_nib +nib -hex is
+    hex =
+      nib '==' '0000' 'then' {const 8 @0 $} 'else'
+      nib '==' '0001' 'then' {const 8 @1 $} 'else'
+      nib '==' '0010' 'then' {const 8 @2 $} 'else'
+      nib '==' '0011' 'then' {const 8 @3 $} 'else'
+      nib '==' '0100' 'then' {const 8 @4 $} 'else'
+      nib '==' '0101' 'then' {const 8 @5 $} 'else'
+      nib '==' '0110' 'then' {const 8 @6 $} 'else'
+      nib '==' '0111' 'then' {const 8 @7 $} 'else'
+      nib '==' '1000' 'then' {const 8 @8 $} 'else'
+      nib '==' '1001' 'then' {const 8 @9 $} 'else'
+      nib '==' '1010' 'then' {const 8 @A $} 'else'
+      nib '==' '1011' 'then' {const 8 @B $} 'else'
+      nib '==' '1100' 'then' {const 8 @C $} 'else'
+      nib '==' '1101' 'then' {const 8 @D $} 'else'
+      nib '==' '1110' 'then' {const 8 @E $} 'else' {const 8 @F $}
+  end
+
+  (** Converts a vector into a ASCII hex vector. *)
+  component hex_of_vector +vec -vec_hex is
+    if width vec <= 0
+      vec_hex = ''
+    ef width vec < 4
+      vec_hex = {hex_of_nib ('0' '#' (4 - width vec) '++' vec) $}
+    ef width vec == 4
+      vec_hex = {hex_of_nib vec $}
+    else
+      vec_hex = {hex_of_vector vec'[((width vec) - 1) : 4] $} '++' {hex_of_nib vec'[3 : 0] $}
+    end
+  end
+end
+  
+(** Returns the integer width of a vector. *)
+component (width) +vec -width_ is
+  {prim VectorWidth a x end vec width_}
+end
+
+(** Clocks a subsystem.  Clock must be a string. *)
+component clock +clock_name +system is
+  {prim VectorClock a b end clock_name system}
+end
+
+(** Resets a subsystem. *)
+component reset +vec_reset +system is
+  {prim VectorReset a b end vec_reset system}
+end
+
+(** Enables a subsystem. *)
+component enable +vec_enable +system is
+  {prim VectorEnable a b end vec_enable system}
+end
+
+(** Posts assertion violation message with test vector drops low. *)
+(* XXX
+component assert +message +test is
+  {prim VectorAssert a b end message test}
+end
+*)
+
+(** Creates a top level input, given a port name and width. *)
+component input +name +width_ -vec is
+  {prim VectorInput a b x end name width_ vec}
+end
+
+(** Creates a top level output, given a port name and vector. *)
+component output +name +vec is
+  {prim VectorOutput a b end name vec}
+end
+
+(** Displays an ASCII encoded vector, provided enable is high. *)
+(* XXX
+component display +enable +message is
+  {prim VectorPrint a b end enable message}
+end
+*)
+
+(** Creates a vector constant given a width and value. *)
+component const +width_ +value -vec is
+  {prim VectorConst a b x end value width_ vec}
+end
+
+(** Creates a vector constant of ...0001. *)
+component one +width_ -vec is
+  {const width_ 1 vec}
+end
+
+(** Creates a vector constant of ...1111. *)
+component ones +width_ -vec is
+  {const width_ -1 vec}
+end
+
+(** Creates a vector constant of ...0000. *)
+component zero +width_ -vec is
+  {const width_ 0 vec}
+end
+
+(** Creates a register given a width and an input vector. *)
+component reg +width_ +in -out is
+  {prim VectorReg a b x end width_ in out}
+end
+
+(** Creates a register chain given a width, a delay length, and an input vector. *)
+component regs +width_ +depth +in -out is
+  if depth <= 0
+    in = out
+  else
+    {regs width_ (depth - 1) {reg width_ in $} out}
+  end
+end
+
+(** Creates a ROM given a data width, list of values, and an address vector. *)
+(* XXX Implemented with registers. *)
+component rom +width_ +values +addr -data with rom_consts is
+  {List.map comp a x is x = width_'a end values rom_consts}
+  {reg width_ {mux addr rom_consts $} data}
+end
+
+(** Creates a read-before-write RAM.  *)
+component ram_rbw +data_width +write_enable +write_addr +write_data +read_addr -read_data with reg_enables reg_data is
+  {decoder write_enable write_addr reg_enables}
+  {List.map comp +reg_enable -reg_data is {enable reg_enable {reg data_width write_data reg_data}} end {list_of_bits reg_enables $} reg_data}
+  {reg data_width {mux read_addr reg_data $} read_data}
+end
+
+(** Creates a write-before-read RAM.  *)
+component ram_wbr +data_width +write_enable +write_addr +write_data +read_addr -read_data with reg_enables reg_data is
+  {decoder write_enable write_addr reg_enables}
+  {List.map comp +reg_enable -reg_data is {enable reg_enable {reg data_width write_data reg_data}} end {list_of_bits reg_enables $} reg_data}
+  {mux {reg (width read_addr) read_addr $} reg_data read_data}
+end
+
+(** Vector bitwise NOT. *)
+component ('~') +a -x is
+  {prim VectorNot a x end a x}
+end
+
+(** Vector bitwise AND. *)
+component ('&') +a +b -x is
+  {prim VectorAnd a b x end a b x}
+end
+
+(** Vector bitwise XOR. *)
+component ('^') +a +b -x is
+  {prim VectorXor a b x end a b x}
+end
+
+(** Vector bitwise OR. *)
+component ('|') +a +b -x is
+  {prim VectorOr a b x end a b x}
+end
+
+(** 2 input mux: ctrl 'then' high 'else' low *)
+component ('then') +ctrl +high +low -result is
+  {prim VectorMux a b c x end ctrl high low result}
+end
+
+(** Vector concatenation. *)
+component ('++') +a +b -x is
+  {prim VectorConcat a b x end a b x}
+end
+
+(** Vector repeated concatenation. *)
+component ('#') +vec +count -vec_out is
+  if count <= 0
+    vec_out = ''
+  else
+    vec_out = vec '++' {('#') vec (count - 1) $}
+  end
+end
+
+(** Vector bit select or constant declaration.
+    For selection, bits is a list of integers, where head of list becomes MSB.
+    For constant declartion, in is the width and bits is the value. *)
+component (') +in +bits -out is
+  if {is_integer in $}
+    {const in bits out}
+  else
+    {prim VectorSelect a b x end in bits out}
+  end
+end
+
+(** Vector equality comparison. *)
+component ('==') +a +b -is_equal is
+  {prim VectorEqu a b x end a b is_equal}
+end
+
+(** Vector inequality comparison. *)
+component ('!=') +a +b -is_not_equal is
+  is_not_equal = '~' (a '==' b)
+end
+
+(** Vector unsigned less than comparison. *)
+component ('<') +a +b -yes is
+  {prim VectorLt a b yes end a b yes}
+end
+
+(** Vector unsigned greater than comparison. *)
+component ('>') +a +b -yes is
+  {('<') b a yes}
+end
+
+(** Vector unsigned less than or equal comparison. *)
+component ('<=') +a +b -yes is
+  yes = '~' (a '>' b)
+end
+
+(** Vector unsigned greater than or equal comparison. *)
+component ('>=') +a +b -yes is
+  yes = '~' (a '<' b)
+end
+
+(** Vector signed less than comparison. *)
+component ('<+') +a +b -yes is
+  yes = ('~' 'msb' a '++' 'lsbs' a) '<'  ('~' 'msb' b '++' 'lsbs' b)
+end
+
+(** Vector signed greater than comparison. *)
+component ('>+') +a +b -yes is
+  yes = ('~' 'msb' a '++' 'lsbs' a) '>'  ('~' 'msb' b '++' 'lsbs' b)
+end
+
+(** Vector signed less than or equal comparison. *)
+component ('<=+') +a +b -yes is
+  yes = ('~' 'msb' a '++' 'lsbs' a) '<=' ('~' 'msb' b '++' 'lsbs' b)
+end
+
+(** Vector signed greater than or equal comparison. *)
+component ('>=+') +a +b -yes is
+  yes = ('~' 'msb' a '++' 'lsbs' a) '>=' ('~' 'msb' b '++' 'lsbs' b)
+end
+
+(** Vector addition. *)
+component ('+') +a +b -x is
+  {prim VectorAdd a b x end a b x}
+end
+
+(** Vector subtraction. *)
+component ('-') +a +b -x is
+  {prim VectorSub a b x end a b x}
+end
+
+(** Vector unsigned multiplication. *)
+component ('*') +a +b -x is
+  if width a == 0 || width b == 0 {error "('*'):  Vectors require width greater than 0."} end
+  {prim VectorMul a b x end ({zero (width b) $} '++' a) ({zero (width a) $} '++' b) x}
+end
+
+(** Vector signed multiplication. *)
+component ('*+') +a +b -x is
+  if width a == 0 || width b == 0 {error "('*+'):  Vectors require width greater than 0."} end
+  {prim VectorMul a b x end ('msb' a '#' width b '++' a) ('msb' b '#' width a '++' b) x}
+end
+
+(** Vector shift right.  Shift amount must be a positive integer. *)
+component ('<<') +vec_a +shift -vec_x is     (* XXX Add support for vector '<<' vector. *)
+  if shift < 0 
+    {error "('<<'):  Shift amount must be >= 0."}
+  else with width_ is
+    width_ = width vec_a
+    if shift >= width_
+      vec_x = '0' '#' width_
+    else
+      vec_x = vec_a'[(width_ - 1 - shift) : 0] '++' '0' '#' shift
+    end
+  end
+end
+
+(** Vector unsigned shift left.  Shift amount must be a positive integer. *)
+component ('>>') +vec_a +shift -vec_x is   (* XXX Add support for vector '>>' vector. *)
+  if shift < 0 
+    {error "('>>'):  Shift amount must be >= 0."}
+  else with width_ is
+    width_ = width vec_a
+    if shift >= width_
+      vec_x = '0' '#' width_
+    else
+      vec_x = '0' '#' shift '++' vec_a'[(width_ - 1) : shift]
+    end
+  end
+end
+
+(** Vector signed shift left.  Shift amount must be a positive integer. *)
+component ('>>+') +vec_a +shift -vec_x is    (* XXX Add support for vector '>>+' vector. *)
+  if shift < 0 
+    {error "('>>+'):  Shift amount must be >= 0."}
+  else with width_ is
+    width_ = width vec_a
+    if shift >= width_
+      vec_x = 'msb' vec_a '#' width_
+    else
+      vec_x = 'msb' vec_a '#' shift '++' vec_a'[(width_ - 1) : shift]
+    end
+  end
+end
+
+(** ('/') operator is not supported. *)
+component ('/') +vec_a +vec_b -vec_x is
+  {error "('/'):  Operator not supported."}  (* XXX *)
+end
+
+(** ('%') operator is not supported. *)
+component ('%') +vec_a +vec_b -vec_x is
+  {error "('%'):  Operator not supported."}  (* XXX *)
+end
+
+(** ('**') operator is not supported. *)
+component ('**') +vec_a +vec_b -vec_x is
+  {error "('**'):  Operator not supported."}  (* XXX *)
+end
+
+(** Returns the least signficant bit of a vector. *)
+component ('lsb') +vec_a -vec_x is
+  vec_x = vec_a'[0]
+end
+
+(** Returns the most signficant bit of a vector. *)
+component ('msb') +vec_a -vec_x is
+  vec_x = vec_a'[(width vec_a - 1)]
+end
+
+(** Returns a vector without the most signficant bit. *)
+component ('lsbs') +vec_a -vec_x  is
+  if width vec_a == 0
+    {error "('lsbs'): Width must be > 0."}
+  ef width vec_a == 1
+    vec_x = ''
+  else
+    vec_x = vec_a'[(width vec_a - 2) : 0]
+  end
+end
+
+(** Returns a vector without the least signficant bit. *)
+component ('msbs') +vec_a -vec_x  is
+  if width vec_a == 0
+    {error "('msbs'): Width must be > 0."}
+  ef width vec_a == 1
+    vec_x <- ''
+  else
+    vec_x <- vec_a'[(width vec_a - 1) : 1]
+  end
+end
+
+(*
+(** External combinatorial component. *)
+component external_combinatorial +name +params +in +width_out -out is
+  {prim VectorExtComb a b c d x end name params in width_out out}
+end
+
+(** External sequential component. *)
+component external_sequential +name +params +in +width_out -out is
+  {prim VectorExtSequ a b c d x end name params in width_out out}
+end
+
+(** External soft component. *)
+component external_softvector +name +params +width_ *data is
+  {prim VectorExtSoft a b c x end name params width_ data}
+end
+*)
+
+(** Splits of a vector into a list of 1-bit vectors.  Head of list is MSB. *)
+component list_of_bits +vec -bits is
+  if width vec == 0
+    bits = []
+  else
+    bits = 'msb' vec :: {list_of_bits ('lsbs' vec) $}
+  end
+end
+
+(** Returns '1' when all bits in a vector are high. *)
+component all_bits_high +vec -yes is
+  {List.tree ('&') unify {list_of_bits vec $} yes}
+end
+
+(** Returns '1' when all bits in a vector are low. *)
+component all_bits_low +vec -yes is
+  yes = '~' {List.tree ('|') unify {list_of_bits vec $} $}
+end
+
+(** Returns '1' when all bits in a vector are the same. *)
+component all_bits_same +vec -yes is
+  yes = {all_bits_high vec $} '|' {all_bits_low vec $}
+end
+
+local mux_down_row is
+  component mux_down_row +sel +ins -outs is
+    if ins == [] || length ins == 1
+      outs = ins
+    else
+      outs = (sel 'then' head tail ins 'else' head ins) :: {mux_down_row sel (tail tail ins) $}
+    end
+  end
+
+  (** Vector multiplexer.  Select of '000' selects head of options. *)
+  component mux +select +options -out is
+    if options == []
+      {error "mux: Option list must have at least 1 element."}
+    ef length options == 1
+      out = head options
+    ef width select == 0
+      {error "mux: Not enough select bits to select all options."}
+    else
+      out = {mux ('msbs' select) {mux_down_row ('lsb' select) options $} $}
+    end
+  end
+end
+
+(** Given a width, creates an up counter reset to 0. *)
+component counter +width_ -count with next is
+  next = count '+' {one width_ $}
+  {reg width_ next count}
+end
+
+(** Decoder with an enable. *)
+component decoder +enable +addr -decode with addr_width number table_rows is
+  addr_width = width addr
+  number = 2 ** addr_width
+  component table_rows +count -rows is
+    if count >= number
+      rows = []
+    else
+      rows = [("1" ++ {binary_of_integer count addr_width $}) (("0" # (number - count - 1)) ++ "1" ++ ("0" # count))] :: {table_rows (count + 1) $}
+    end
+  end
+  {truth_table ([("0" ++ ("-" # addr_width)) ("0" # number)] :: {table_rows 0 $}) (enable '++' addr) decode}
+end
+
+
+
+
+
+
+local validate_input_bit validate_output_bit check_table build_outputs select build_logic is
+  component validate_input_bit +bit is
+    if ! (bit == @0 || bit == @1 || bit == @-) {error "truth_table:  Invalid bit string."} end
+  end
+
+  component validate_output_bit +bit is
+    if ! (bit == @0 || bit == @1) {error "truth_table:  Invalid bit string."} end
+  end
+
+  component check_table +table +input_width +output_width is
+    if table != [] with row input output is
+      row = head table
+      {List.nth row 0 input}
+      {List.nth row 1 output}
+      if input_width  != length input  {error "truth_table:  Input width does not match." } end
+      if output_width != length output {error "truth_table:  Output width does not match."} end
+      {List.iterate validate_input_bit input}
+      {List.iterate validate_output_bit output}
+      {check_table (tail table) input_width output_width}
+    end
+  end
+
+  component build_outputs +outputs +assoc_in -assoc_out is
+    if outputs == []
+      assoc_out = assoc_in
+    else with output is
+      output = head outputs
+      if {List.Assoc.member assoc_in output $}
+        {build_outputs (tail outputs) assoc_in assoc_out}
+      else
+        {build_outputs
+          (tail outputs)
+          {List.Assoc.add assoc_in output {const (length output) {integer_of_binary output $} $} $}
+          assoc_out}
+      end
+    end
+  end
+
+  component select +input +bit -bit_string -bit_select is
+    if input == []
+      bit_string = ""
+      bit_select = []
+    else
+      if head input == @-
+        {select (tail input) (bit - 1) bit_string bit_select}
+      else with bit_string_0 bit_select_0 is
+        {select (tail input) (bit - 1) bit_string_0 bit_select_0}
+        bit_string = head input :: bit_string_0
+        bit_select = bit :: bit_select_0
+      end
+    end
+  end
+
+  component build_logic +table +input +input_width +output_vectors -output with row input_string output_string is
+    row = head table
+    {List.nth row 0 input_string}
+    {List.nth row 1 output_string}
+    if length table == 1
+      {List.Assoc.find output_vectors {List.nth row 1 $} output}
+    else with bit_string bit_select vector_comp is
+      {select input_string (input_width - 1) bit_string bit_select}
+      {const (length bit_string) {integer_of_binary bit_string $} vector_comp}
+      if length bit_string == input_width
+        output = input '==' vector_comp 'then' {List.Assoc.find output_vectors output_string $} 'else' {build_logic (tail table) input input_width output_vectors $}
+      else
+        output = input'bit_select '==' vector_comp 'then' {List.Assoc.find output_vectors output_string $} 'else' {build_logic (tail table) input input_width output_vectors $}
+      end
+    end
+  end
+        
+  (** Constructs a truth-table given an input and a table.  Example: [["00" "11"] ["01" "10"] ["1-" "00"]] *)
+  component truth_table +table +input -output with outputs is
+    {check_table table (length head head table) (length head tail head table)}
+    {build_outputs {List.nth {List.transpose table $} 1 $} [] outputs}
+    {build_logic table input (width input) outputs output}
+  end
+end
+
+(**
+  Constructs a state-machine given a state transition table.
+  Inputs (i) and current states (s) may use dontcare bits ("-01").
+  Outputs (o) and next states (s) must only use true bits ("01").
+  Example: [(i:"0-" s:"0" n:"1" o:"11")
+            (i:"11" s:"1" n:"0" o:"00")]
+*)
+component state_machine +table +input -output with
+  first_row i_width s_width o_width validate_row tt_table
+  state next_state next_state_output
+is
+  first_row = head table
+  i_width = length first_row.i
+  o_width = length first_row.o
+  s_width = length first_row.s
+  component validate_row row is
+    if length row.i != i_width  {error "state-machine: Inconsistant input widths."} end
+    if length row.o != o_width  {error "state-machine: Inconsistant output widths."} end
+    if length row.s != s_width  {error "state-machine: Inconsistant state widths."} end
+    if length row.n != s_width  {error "state-machine: Inconsistant next-state widths."} end
+  end
+  {List.iterate validate_row table}
+  {List.map comp row_sm row_tt is row_tt = [(row_sm.i ++ row_sm.s) (row_sm.n ++ row_sm.o)] end table tt_table}
+  {reg s_width next_state state}
+  {truth_table tt_table (input '++' state) next_state_output}
+  next_state = next_state_output'[(s_width + o_width - 1) : o_width]
+  output     = next_state_output'[(o_width - 1) : 0]
+end
+
+
+(* Properties *)
+
+(** Checks if value is a property. *)
+component is_property +value -yes is
+  {prim IsProperty a x end value yes}
+end
+
+(** Converts a property to a string. *)
+component string_of_property +prop -str is
+  if ! {is_property prop $}
+    {error "string_of_property: Value is not a property."}
+  else
+    str = "<property>"
+  end
+end
+
+(** Property logical negation. *)
+component (`!`) +prop_a -prop_x is
+  {prim PropertyNot a x end prop_a prop_x}
+end
+
+(** Property temporal next. *)
+component (`X`) +prop_a -prop_x is
+  {prim PropertyNext a x end prop_a prop_x}
+end
+
+(** Property logical AND. *)
+component  (`&&`) +prop_a +prop_b -prop_x is
+  prop_x = `!` (`!` prop_a `||` `!` prop_b)
+end
+
+(** Property logical XOR. *)
+component (`^^`) +prop_a +prop_b -prop_x is
+  prop_x = (prop_a `&&` `!` prop_b) `||` (`!` prop_a `&&` prop_b)
+end
+
+(** Property logical OR. *)
+component (`||`) +prop_a +prop_b -prop_x is
+  {prim PropertyOr a b x end prop_a prop_b prop_x}
+end
+
+(** Property logical equivalence. *)
+component (`<->`) +prop_a +prop_b -prop_x is
+  prop_x = `!` (prop_a `^^` prop_b)
+end
+
+(** Propeprty logical implication. *)
+component (`->`) +prop_a +prop_b -prop_x is
+  prop_x = `!` (prop_a `&&` `!` prop_b)
+end
+
+(** Property temporal until. *)
+component (`U`) +prop_a +prop_b -prop_x is
+  {prim PropertyUntil a b x end prop_a prop_b prop_x}
+end
+
+(** Property sequence. *)
+component sequence +prop_list -prop_x is
+  if prop_list == []
+    {error "sequence: Requires one or more properties."}
+  ef length prop_list == 1
+    prop_x = head prop_list
+  else
+    prop_x = head prop_list `->` `X` {sequence (tail prop_list) $}
+  end
+end
+

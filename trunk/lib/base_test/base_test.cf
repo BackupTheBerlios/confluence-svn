@@ -1,0 +1,630 @@
+(*
+    Confluence System Design Library
+    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+ 
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+(** Unit testing of base.cf. *)
+
+-suite
+
+with
+
+ut
+
+general
+components
+systems
+numbers
+integers
+floats
+booleans
+records
+lists
+vectors
+
+is
+
+ut <- import "$CF_LIB/common/unit_test.cf"
+
+{ut.run_test "" "all" suite}
+
+
+component suite +N is
+  {ut.run_test N "TestGeneral"    general    }
+  {ut.run_test N "TestComponents" components }
+  {ut.run_test N "TestSystems"    systems    }
+  {ut.run_test N "TestNumbers"    numbers    }
+  {ut.run_test N "TestIntegers"   integers   }
+  {ut.run_test N "TestFloats"     floats     }
+  {ut.run_test N "TestBooleans"   booleans   }
+  {ut.run_test N "TestRecords"    records    }
+  {ut.run_test N "TestLists"      lists      }
+  {ut.run_test N "TestVectors"    vectors    }
+end
+
+component general +N is
+  {ut.assert_equal N "string_of_1" {string_of 1 [] $} "1"}
+  {ut.assert_equal N "string_of_2" {string_of true [] $} "true"}
+  {ut.assert_equal N "string_of_3" {string_of '0011' [] $} "<vector: 4>"}
+  {ut.assert_equal N "string_of_4" {string_of [1 2 3 [4 5]] [] $} "[1 2 3 [4 5]]"}
+  {ut.assert_equal N "(==)_0" (1 == 2) false}
+  {ut.assert_equal N "(==)_1" (1 == 1) true}
+  {ut.assert_equal N "(!=)_0" (1 != 2) true}
+  {ut.assert_equal N "(!=)_1" (1 != 1) false}
+end
+
+component components +N is
+  {ut.assert_equal N "is_component_1" {is_component 1 $} false}
+  {ut.assert_equal N "is_component_2" {is_component is_component $} true}
+  {ut.assert_equal N "string_of_component" {string_of_component is_component $} "<component>"}
+end
+
+component systems +N is
+  {ut.assert_equal N "is_system_1" {is_system {is_system 1 _} $} true}
+  {ut.assert_equal N "is_system_2" {is_system [] $} false}
+  {ut.assert_equal N "string_of_system" {string_of_system {is_system 1 _} [] $} "<system: (value:1 yes:false)>"}
+  {ut.assert_equal N "ports_of_system" {ports_of_system {(::) 1 [2 3] _} $} (hd:1 tl:[2 3] list:[1 2 3])}
+
+  local
+    test_comp test_sys_dot_name test_sys_dot_position test_rec_dot_name test_rec_dot_position
+    test_app_name test_func_name
+  is
+    component test_comp +a +b -x is
+      x = a + b
+    end
+
+    test_sys_dot_name = {test_comp _ 2 _}
+    test_sys_dot_position = {test_comp _ _ _}
+
+    test_rec_dot_name     = {ports_of_system test_sys_dot_name $}
+    test_rec_dot_position = {ports_of_system test_sys_dot_position $}
+
+    test_sys_dot_name.a = 1
+
+    test_sys_dot_position.1 = 2
+    test_sys_dot_position.2 = 4
+
+    {ut.assert_equal N "Sys.Name_1" test_sys_dot_name.a 1}
+    {ut.assert_equal N "Sys.Name_2" test_sys_dot_name.b 2}
+    {ut.assert_equal N "Sys.Name_3" test_sys_dot_name.x 3}
+
+    {ut.assert_equal N "Sys.Position_1" test_sys_dot_position.1 2}
+    {ut.assert_equal N "Sys.Position_2" test_sys_dot_position.2 4}
+    {ut.assert_equal N "Sys.Position_3" test_sys_dot_position.3 6}
+
+    {ut.assert_equal N "Rec.Name_1" test_rec_dot_name.a 1}
+    {ut.assert_equal N "Rec.Name_2" test_rec_dot_name.b 2}
+    {ut.assert_equal N "Rec.Name_3" test_rec_dot_name.x 3}
+
+    {ut.assert_equal N "Rec.Position_1" test_rec_dot_position.1 2}
+    {ut.assert_equal N "Rec.Position_2" test_rec_dot_position.2 4}
+    {ut.assert_equal N "Rec.Position_3" test_rec_dot_position.3 6}
+
+    {test_app_name : test_comp 1 2 _}
+    _ = {test_func_name : test_comp 2 4 $}
+
+    {ut.assert_equal N "{name : comp _}_1" test_app_name.1 1}
+    {ut.assert_equal N "{name : comp _}_2" test_app_name.2 2}
+    {ut.assert_equal N "{name : comp _}_3" test_app_name.3 3}
+
+    {ut.assert_equal N "{name : comp $}_1" test_func_name.1 2}
+    {ut.assert_equal N "{name : comp $}_2" test_func_name.2 4}
+    {ut.assert_equal N "{name : comp $}_3" test_func_name.3 6}
+  end
+
+  local sys is
+    sys = local a b c is
+      a = 1
+      b = 2
+      c = "yep"
+    end
+    {ut.assert_equal N "name = local 1" sys.1 1}
+    {ut.assert_equal N "name = local 2" sys.b 2}
+    {ut.assert_equal N "name = local 3" sys.c "yep"}
+  end
+end
+
+component numbers +N is
+  {ut.assert_equal N "(<)_0" (1 < 2) true}
+  {ut.assert_equal N "(<)_1" (2.0 < 1.0) false}
+  {ut.assert_equal N "(<=)_0" (1 <= 1) true}
+  {ut.assert_equal N "(<=)_1" (0.0 <= -2.0) false}
+  {ut.assert_equal N "(>)_0" (1 > 2) false}
+  {ut.assert_equal N "(>)_1" (2.0 > 1.0) true}
+  {ut.assert_equal N "(>=)_0" (1 >= 1) true}
+  {ut.assert_equal N "(>=)_1" (0.0 >= -2.0) true}
+  {ut.assert_equal N "(+)_0" (1 + 1) 2}
+  {ut.assert_equal N "(+)_1" (-1.0 + -1.0) -2.0}
+  {ut.assert_equal N "(-)_0" (1 - 2) -1}
+  {ut.assert_equal N "(-)_1" (1.0 - -1.0) 2.0}
+  {ut.assert_equal N "(*)_0" (3 * 2) 6}
+  {ut.assert_equal N "(*)_1" (3.0 * -1.0) -3.0}
+  {ut.assert_equal N "(/)_0" (10 / 2) 5}
+  {ut.assert_equal N "(/)_1" (10.0 / -2.0) -5.0}
+  {ut.assert_equal N "(**)_0" (2 ** 4) 16}
+  {ut.assert_equal N "(**)_1" (2.0 ** 4.0) 16.0}
+end
+
+component integers +N is
+  {ut.assert_boolean N "Integer constants 1" (0 == 0x0 && 0 == 0b0)}
+  {ut.assert_boolean N "Integer constants 2" (1 == 0x1 && 1 == 0b1)}
+  {ut.assert_boolean N "Integer constants 3" (-2 == 1xE && -2 == 1b0)}
+  {ut.assert_equal N "is_integer1" {is_integer 22 $} true}
+  {ut.assert_equal N "is_integer2" {is_integer 0xAB $} true}
+  {ut.assert_equal N "is_integer3" {is_integer 1xAB $} true}
+  {ut.assert_equal N "is_integer4" {is_integer [1] $} false}
+  {ut.assert_equal N "string_of_integer" {string_of_integer 16 $} "16"}
+  {ut.assert_equal N "integer_of_string_1" {integer_of_string "-8" $} -8}
+  {ut.assert_equal N "integer_of_string_2" {integer_of_string "123456789012345678901234567890" $} 123456789012345678901234567890}
+  {ut.assert_equal N "float_of_integer" {integer_of_float {float_of_integer -8 $} $} -8}
+  {ut.assert_equal N "range_1" {range 0 0 $} [0]}
+  {ut.assert_equal N "range_2" {range -2 3 $} [-2 -1 0 1 2 3]}
+  {ut.assert_equal N "range_3" {range 2 -3 $} [2 1 0 -1 -2 -3]}
+  {ut.assert_equal N "(%)_0" (5 % 2) 1}
+  {ut.assert_equal N "(%)_1" (10 % 2) 0}
+  {ut.assert_equal N "(%)_2" (-5 % 2) 1}
+  {ut.assert_equal N "(~)_0" (~ 1) -2}
+  {ut.assert_equal N "(&)_0" (0b0011 & 0b0101) 0b0001}
+  {ut.assert_equal N "(^)_0" (0b0011 ^ 0b0101) 0b0110}
+  {ut.assert_equal N "(|)_0" (0b0011 | 0b0101) 0b0111}
+  {ut.assert_equal N "(<<)_0" (0b0011 << 2) 0b1100}
+  {ut.assert_equal N "(>>)_0" (0b0011 >> 1) 0b0001}
+  {ut.assert_equal N "(>>)_1" (1b0011 >> 1) 1b1001}
+  {ut.assert_equal N "(:)_0" [0 : 2] [0 1 2]}
+  {ut.assert_equal N "(:)_1" [-1 : -1] [-1]}
+  {ut.assert_equal N "binary_of_integer_0" {binary_of_integer 2 4 $} "0010"}
+  {ut.assert_equal N "binary_of_integer_1" {binary_of_integer -1 8 $} "11111111"}
+  {ut.assert_equal N "binary_of_integer_2" {binary_of_integer -1 0 $} ""}
+  {ut.assert_equal N "integer_of_binary_0" {integer_of_binary "1100" $} 0b1100}
+  {ut.assert_equal N "integer_of_binary_1" {integer_of_binary "1" $} 0b1}
+  {ut.assert_equal N "integer_of_binary_2" {integer_of_binary "" $} 0}
+  {ut.assert_equal N "bits_required_1" {bits_required 1 $} 1}
+  {ut.assert_equal N "bits_required_2" {bits_required 2 $} 1}
+  {ut.assert_equal N "bits_required_3" {bits_required 3 $} 2}
+  {ut.assert_equal N "bits_required_4" {bits_required 4 $} 2}
+  {ut.assert_equal N "bits_required_5" {bits_required 5 $} 3}
+end
+
+component floats +N is
+  {ut.assert_equal N "is_float_1" {is_float 1.1 $} true}
+  {ut.assert_equal N "is_float_2" {is_float -0.2e15 $} true}
+  {ut.assert_equal N "is_float_3" {is_float 1 $} false}
+  {ut.assert_equal N "string_of_float" {string_of_float 1.0 $} "1.0"}
+  {ut.assert_equal N "float_of_string" {float_of_string "1.0" $} 1.0}
+  {ut.assert_equal N "ceil_1" {ceil 0.5 $} 1.0}
+  {ut.assert_equal N "ceil_2" {ceil -0.5 $} 0.0}
+  {ut.assert_equal N "floor_1" {floor 0.5 $} 0.0}
+  {ut.assert_equal N "floor_2" {floor -0.5 $} -1.0}
+  {ut.assert_equal N "round_1" {round 0.4 $} 0.0}
+  {ut.assert_equal N "round_2" {round 0.6 $} 1.0}
+  {ut.assert_equal N "round_3" {round -0.4 $} 0.0}
+  {ut.assert_equal N "round_4" {round -0.6 $} -1.0}
+end
+
+component booleans +N is
+  {ut.assert_equal N "is_boolean_1" {is_boolean true $} true}
+  {ut.assert_equal N "is_boolean_2" {is_boolean false $} true}
+  {ut.assert_equal N "is_boolean_3" {is_boolean 3.14 $} false}
+  {ut.assert_equal N "string_of_boolean_1" {string_of_boolean true $} "true"}
+  {ut.assert_equal N "string_of_boolean_2" {string_of_boolean false $} "false"}
+
+  {ut.assert_equal N "(!)_0" (! true) false}
+  {ut.assert_equal N "(!)_1" (! false) true}
+
+  {ut.assert_equal N "then_else_0" (true  then 1 else 2) 1}
+  {ut.assert_equal N "then_else_1" (false then 1 else 2) 2}
+
+  {ut.assert_equal N "||_1" (false || false || 8) 8}
+  {ut.assert_equal N "||_2" (false || true || 8) true}
+
+  {ut.assert_equal N "&&_1" (false && false && 8) false}
+  {ut.assert_equal N "&&_2" (true && false && 8) false}
+  {ut.assert_equal N "&&_3" (true && true && 8) 8}
+end
+
+component records +N is
+  {ut.assert_equal N "record_1" () ()}
+  {ut.assert_equal N "record_2" (A:1 B:2) (A:1 B:2)}
+  local R1 R2 is
+    R1 = (A:R2 B:2)
+    R2 = (A:R1 B:2)
+    {ut.assert_equal N "record_3" R1 R2}
+  end
+  {ut.assert_equal N "is_record_1" {is_record () $} true}
+  {ut.assert_equal N "is_record_2" {is_record (A:1 B:2) $} true}
+  {ut.assert_equal N "is_record_3" {is_record "ListAreRecordsToo" $} true}
+  {ut.assert_equal N "is_record_4" {is_record 1024 $} false}
+
+  {ut.assert_equal N "record_info_1" {record_info (A:1 B:2) $} [(name:"A" value:1) (name:"B" value:2)]}
+  {ut.assert_equal N "record_info_2" {record_info () $} []}
+
+  {ut.assert_equal N "string_of_record_0" {string_of_record (A:1 B:2) [] $} "(A:1 B:2)"}
+  local r is
+    r = (a:1 b:r)
+    {ut.assert_equal N "string_of_record_1" {string_of_record r [] $} "(a:1 b:rec)"}
+  end
+end
+
+component lists +N is
+  {ut.assert_equal N "list_1" [] ""}
+  {ut.assert_equal N "list_2" [1 2 3 4] [1 : 4]}
+  {ut.assert_equal N "list_3" [0 -1 -2] [0 : -2]}
+  {ut.assert_equal N "list_4" [0 1 2 3 4 5] [0 1 : 4 5]}
+  {ut.assert_equal N "is_list_1" {is_list [] $} true}
+  {ut.assert_equal N "is_list_2" {is_list [1 2 3] $} true}
+  {ut.assert_equal N "is_list_3" {is_list "abc" $} true}
+  {ut.assert_equal N "string_1" "abc" [97 98 99]}
+  {ut.assert_equal N "string_2" "abc" [@a @b @c]}
+  {ut.assert_equal N "string_3" "\\"  [@\]}
+  {ut.assert_equal N "string_4" "\""  [@"]}
+  {ut.assert_equal N "string_5" "\t"  [9]}
+  {ut.assert_equal N "string_6" "\n"  [10]}
+  {ut.assert_equal N "string_7" "\r"  [13]}
+  {ut.assert_equal N "string_of_list_0" {string_of_list [1 2 [3 4] [5 6]] [] $} "[1 2 [3 4] [5 6]]"}
+  {ut.assert_equal N "string_of_list_1" {string_of_list [1 2 [3 4] [5 6]] [] $} "[1 2 [3 4] [5 6]]"}
+  local l is
+    l = [1 2 l]
+    {ut.assert_equal N "string_of_list_2" {string_of_list l [] $} "[1 2 rec]"}
+  end
+  {ut.assert_equal N "(head)_0" (head [1 2 3]) 1}
+  {ut.assert_equal N "(tail)_0" (tail [1 2 3]) [2 3]}
+  {ut.assert_equal N "(tail)_1" (tail [1]) []}
+  {ut.assert_equal N "(length)_0" (length []) 0}
+  {ut.assert_equal N "(length)_1" (length [1 2 3]) 3}
+  {ut.assert_equal N "(++)_0" ([] ++ [1 2]) [1 2]}
+  {ut.assert_equal N "(++)_1" ([1 2] ++ []) [1 2]}
+  {ut.assert_equal N "(++)_2" ([1 2] ++ [3]) [1 2 3]}
+  {ut.assert_equal N "(::)_0" (1 :: [2 3]) [1 2 3]}
+  {ut.assert_equal N "(#)_0" ([1 2] # 0) []}
+  {ut.assert_equal N "(#)_1" ([1 2] # 3) [1 2 1 2 1 2]}
+
+  {ut.assert_equal N "List.nth_1" {List.nth [1 2 3] 0 $} 1}
+  {ut.assert_equal N "List.nth_2" {List.nth [1 2 3] 2 $} 3}
+
+  {ut.assert_equal N "List.take_1" {List.take [1 2 3] 0 $} []}
+  {ut.assert_equal N "List.take_2" {List.take [1 2 3] 1 $} [1]}
+  {ut.assert_equal N "List.take_3" {List.take [1 2 3] 3 $} [1 2 3]}
+
+  {ut.assert_equal N "List.drop_1" {List.drop [1 2 3] 0 $} [1 2 3]}
+  {ut.assert_equal N "List.drop_2" {List.drop [1 2 3] 1 $} [2 3]}
+  {ut.assert_equal N "List.drop_3" {List.drop [1 2 3] 3 $} []}
+
+  {ut.assert_equal N "List.reverse_1" {List.reverse [] $} []}
+  {ut.assert_equal N "List.reverse_2" {List.reverse [1 2 3] $} [3 2 1]}
+
+  {ut.assert_equal N "List.flatten_1" {List.flatten [] $} []}
+  {ut.assert_equal N "List.flatten_2" {List.flatten [1 2 3] $} [1 2 3]}
+  {ut.assert_equal N "List.flatten_3" {List.flatten [1 2 [3 4 [5 6] 7] 8] $} [1 2 3 4 5 6 7 8]}
+
+  {ut.assert_equal N "List.isolate_1" {List.isolate [] $} []}
+  {ut.assert_equal N "List.isolate_2" {List.isolate [1 2 3] $} [[1] [2] [3]]}
+
+  {ut.assert_equal N "List.transpose" {List.transpose [[1 2 3] [4 5 6]] $} [[1 4] [2 5] [3 6]]}
+
+  {ut.assert_equal N "List.map_1" {List.map (~) [] $} []}
+  {ut.assert_equal N "List.map_2" {List.map (~) [0x0 0x1 0x3] $} [1xF 1xE 1xC]}
+
+  {ut.assert_equal N "List.map2_1" {List.map2 (+) [] [] $} []}
+  {ut.assert_equal N "List.map2_2" {List.map2 (+) [1 2 3] [4 5 6] $} [5 7 9]}
+
+  {ut.assert_equal N "List.fold_left_1" {List.fold_left (+) 2 [] $} 2}
+  {ut.assert_equal N "List.fold_left_2" {List.fold_left (+) 2 [3 4] $} 9}
+
+  {ut.assert_equal N "List.fold_right1" {List.fold_right (+) [] 3 $} 3}
+  {ut.assert_equal N "List.fold_right2" {List.fold_right (+) [3 4] 3 $} 10}
+
+  {ut.assert_equal N "List.tree_1" {List.tree (+) comp +A -X is A * 2 -> X end [1 2 3] $} 9}
+  {ut.assert_equal N "List.tree_2" {List.tree (+) comp +A -X is A * 2 -> X end [1 2 3 4 5] $} 30}
+
+  {ut.assert_equal N "List.Assoc.find_1" {List.Assoc.find [[1 2] [2 4] [3 6]] 1 $} 2}
+  {ut.assert_equal N "List.Assoc.find_2" {List.Assoc.find [[1 2] [2 4] [3 6]] 2 $} 4}
+  {ut.assert_equal N "List.Assoc.find_3" {List.Assoc.find [[1 2] [2 4] [3 6]] 3 $} 6}
+
+  {ut.assert_equal N "List.Assoc.member_1" {List.Assoc.member [[1 2] [2 4] [3 6]] 1 $} true}
+  {ut.assert_equal N "List.Assoc.member_2" {List.Assoc.member [[1 2] [2 4] [3 6]] 2 $} true}
+  {ut.assert_equal N "List.Assoc.member_3" {List.Assoc.member [[1 2] [2 4] [3 6]] 4 $} false}
+
+  {ut.assert_equal N "List.Assoc.add_1" {List.Assoc.add [[1 2] [2 4] [3 6]] 0 0 $} [[0 0] [1 2] [2 4] [3 6]]}
+
+  {ut.assert_equal N "List.Assoc.remove_0" {List.Assoc.remove [[1 2] [2 4] [3 6]] 0 $} [[1 2] [2 4] [3 6]]}
+  {ut.assert_equal N "List.Assoc.remove_1" {List.Assoc.remove [[1 2] [2 4] [3 6]] 1 $} [[2 4] [3 6]]}
+  {ut.assert_equal N "List.Assoc.remove_3" {List.Assoc.remove [[1 2] [2 4] [3 6]] 3 $} [[1 2] [2 4]]}
+
+  {ut.assert_equal N "List.Assoc.replace_1" {List.Assoc.replace [[1 2] [2 4] [3 6]] 0 0 $} [[1 2] [2 4] [3 6] [0 0]]}
+  {ut.assert_equal N "List.Assoc.replace_2" {List.Assoc.replace [[1 2] [2 4] [3 6]] 3 7 $} [[1 2] [2 4] [3 7]]}
+
+  {ut.assert_equal N "List.member_1" {List.member [0 1 2 3] 1 $} true}
+  {ut.assert_equal N "List.member_2" {List.member [0 1 2 3] 5 $} false}
+
+  {ut.assert_equal N "List.satisfy_and_1" {List.satisfy_and comp +A -X is A > 2 -> X end [3 7 4] $} true}
+  {ut.assert_equal N "List.satisfy_and_2" {List.satisfy_and comp +A -X is A > 2 -> X end [3 2 4] $} false}
+
+  {ut.assert_equal N "List.satisfy_or_1" {List.satisfy_or comp +A -X is A > 2 -> X end [0 1 -1] $} false}
+  {ut.assert_equal N "List.satisfy_or_2" {List.satisfy_or comp +A -X is A > 2 -> X end [0 3 1] $} true}
+
+  {ut.assert_equal N "List.find_1" {List.find comp +A -X is A > 2 -> X end [0 3 1] $} 3}
+
+  {ut.assert_equal N "List.filter_1" {List.filter comp +A -X is A > 2 -> X end [0 -1 1] $} []}
+  {ut.assert_equal N "List.filter_2" {List.filter comp +A -X is A > 2 -> X end [0 3 4 5 -2 7 1] $} [3 4 5 7]}
+
+  local Trues Falses is
+    {List.partition comp +A -X is A > 2 = X end [0 3 4 5 -2 7 1] Trues Falses}
+    {ut.assert_equal N "List.partition_1" Trues  [3 4 5 7]}
+    {ut.assert_equal N "List.partition_2" Falses [0 -2 1]}
+  end
+
+  {ut.assert_equal N "List.sort_1" {List.sort (<) [] $} []}
+  {ut.assert_equal N "List.sort_2" {List.sort (<) [0 2 4 1 3 5] $} [0 1 2 3 4 5]}
+
+end
+
+
+component vectors +N is
+  {ut.assert_logic N "Vector constants 1" (('0000' '==' '0x0') '&' ('0' '==' '0b0'))}
+  {ut.assert_logic N "Vector constants 2" (('0001' '==' '0x1') '&' ('1' '==' '0b1'))}
+  {ut.assert_logic N "Vector constants 3" (('1110' '==' '0xE') '&' ('0' '==' '1b0'))}
+
+  {output "req_tb_output" '1'}  (* Required for test bench generation. *)
+
+  {ut.assert_equal N "is_vector_1" {is_vector '0011' $} true}
+  {ut.assert_equal N "is_vector_2" {is_vector 1 $} false}
+  {ut.assert_equal N "string_of_vector" {string_of_vector '0011' $} "<vector: 4>"}
+
+  (* XXX
+  {display '1' {vector_of_string "Hello Confluence!" $}}
+  *)
+
+  {ut.assert_logic N "bin_of_vector_1" ({bin_of_vector '00110101' $} '==' '0x3030313130313031')}
+  {ut.assert_logic N "bin_of_vector_2" ({bin_of_vector '10001' $}    '==' '0x3130303031')}
+  {ut.assert_logic N "bin_of_vector_3" ({bin_of_vector '0011' $}     '==' '0x30303131')}
+
+  {ut.assert_logic N "hex_of_vector_1" ({hex_of_vector '011' $}      '==' '0x33')}
+  {ut.assert_logic N "hex_of_vector_2" ({hex_of_vector '0111111' $}  '==' '0x3346')}
+  {ut.assert_logic N "hex_of_vector_3" ({hex_of_vector '00001111' $} '==' '0x3046')}
+
+  {ut.assert_logic N "const_1" ({const 1 0 $}     '==' '0')}
+  {ut.assert_logic N "const_2" ({const 3 -1 $}    '==' '111')}
+  {ut.assert_logic N "const_3" ({const 8 0xABC $} '==' '0xBC')}
+
+  {ut.assert_equal N "one_1" (width {one 2 $}) 2}
+  {ut.assert_logic N "one_2" ({one 3 $} '==' '001')}
+  {ut.assert_logic N "one_3" ({one 1 $} '==' '1')}
+
+  {ut.assert_equal N "ones_1" (width {ones 3 $}) 3}
+  {ut.assert_logic N "ones_2" ({ones 3 $} '==' '111')}
+  {ut.assert_logic N "ones_3" ({ones 1 $} '==' '1')}
+
+  {ut.assert_equal N "zero_1" (width {zero 3 $}) 3}
+  {ut.assert_logic N "zero_2" ({zero 3 $} '==' '000')}
+  {ut.assert_logic N "zero_3" ({zero 1 $} '==' '0')}
+
+  {ut.assert_equal N "reg_0" (width {reg 2 '00' $}) 2}
+  {ut.assert_logic N "reg_1" ({reg 2 '00' $} '==' '00')}
+  {ut.assert_logic N "reg_2" ({reg 2 '11' $} '==' '00')}
+
+  {ut.assert_equal N "regs_0" (width {regs 2 3 '00' $}) 2}
+  {ut.assert_logic N "regs_1" ({regs 2 0 '10' $} '==' '10')}
+  {ut.assert_logic N "regs_2" ({regs 3 1 '001' $} '==' '000')}
+
+  (*
+  {ut.assert_logic N "rom_1" ({rom 4 [3 2 1 0] '11' $} '==' '0000')}
+  *)
+  
+  (*
+  local :ExtComb
+    {NewExternalCombinatorialComponent
+      "TestExtComb" 1
+      comp +Params -WidthIn -WidthOut WidthIn <- WidthOut <- head Params end
+      ExternalComponent
+    {ut.assert_logic N "NewExternalCombinatorialComponent" {
+  end
+  *)
+
+  {ut.assert_equal N "'then'_'else'_0" (width ('0' 'then' '0xAB' 'else' '0xCD')) 8}
+  {ut.assert_logic N "'then'_'else'_1" (('0' 'then' '0xAB' 'else' '0xCD') '==' '0xCD')}
+
+  {ut.assert_equal N "'|'_1" (width ('0xC' '|' '0xA')) 4}
+  {ut.assert_logic N "'|'_2" (('0xC' '|' '0xA') '==' '0xE')}
+
+  {ut.assert_equal N "'^'_1" (width ('0x1C' '^' '0x1A')) 8}
+  {ut.assert_logic N "'^'_2" (('0xC' '^' '0xA') '==' '0x6')}
+
+  {ut.assert_equal N "'&'_1" (width ('0x12C' '&' '0x12A')) 12}
+  {ut.assert_logic N "'&'_2" (('0xC' '&' '0xA') '==' '0x8')}
+
+  {ut.assert_equal N "'=='_0" (width ('00' '==' '11')) 1}
+  {ut.assert_logic N "'=='_1" (('00' '==' '11') '==' '0')}
+
+  {ut.assert_equal N "'!='_0" (width ('00' '!=' '11')) 1}
+  {ut.assert_logic N "'!='_1" (('00' '!=' '11') '==' '1')}
+
+  {ut.assert_equal N "'#'_1" (width ('00' '#' 0)) 0 }
+  {ut.assert_equal N "'#'_2" (width ('00' '#' 1)) 2 }
+  {ut.assert_equal N "'#'_3" (width ('00' '#' 3)) 6 }
+  {ut.assert_equal N "'#'_4" (width ('' '#' 3)) 0 }
+  {ut.assert_logic N "'#'_5" (('011' '#' 3) '==' '011011011')}
+
+  {ut.assert_equal N "'<'_1" (width ('00' '<' '00')) 1}
+  {ut.assert_logic N "'<'_2" ('~'('001' '<' '001'))} 
+  {ut.assert_logic N "'<'_3" ('~'('001' '<' '000'))} 
+  {ut.assert_logic N "'<'_4" (   ('001' '<' '010'))} 
+  {ut.assert_logic N "'<'_5" (   ('001' '<' '110'))} 
+
+  {ut.assert_equal N "'<+'_1" (width ('00' '<+' '00')) 1}
+  {ut.assert_logic N "'<+'_2" ('~'('001' '<+' '001'))} 
+  {ut.assert_logic N "'<+'_3" ('~'('001' '<+' '000'))} 
+  {ut.assert_logic N "'<+'_4" (   ('001' '<+' '010'))} 
+  {ut.assert_logic N "'<+'_5" ('~'('001' '<+' '110'))} 
+
+  {ut.assert_equal N "'>'_1" (width ('00' '>' '00')) 1}
+  {ut.assert_logic N "'>'_2" ('~'('001' '>' '001'))} 
+  {ut.assert_logic N "'>'_3" (   ('001' '>' '000'))} 
+  {ut.assert_logic N "'>'_4" ('~'('001' '>' '010'))} 
+  {ut.assert_logic N "'>'_5" ('~'('001' '>' '110'))} 
+
+  {ut.assert_equal N "'>+'_1" (width ('00' '>+' '00')) 1}
+  {ut.assert_logic N "'>+'_2" ('~'('001' '>+' '001'))} 
+  {ut.assert_logic N "'>+'_3" (   ('001' '>+' '000'))} 
+  {ut.assert_logic N "'>+'_4" ('~'('001' '>+' '010'))} 
+  {ut.assert_logic N "'>+'_5" (   ('001' '>+' '110'))} 
+
+  {ut.assert_equal N "'<='_1" (width ('00' '<=' '00')) 1}
+  {ut.assert_logic N "'<='_2" (   ('001' '<=' '001'))} 
+  {ut.assert_logic N "'<='_3" ('~'('001' '<=' '000'))} 
+  {ut.assert_logic N "'<='_4" (   ('001' '<=' '010'))} 
+  {ut.assert_logic N "'<='_5" (   ('001' '<=' '110'))} 
+
+  {ut.assert_equal N "'<=+'_1" (width ('00' '<=+' '00')) 1}
+  {ut.assert_logic N "'<=+'_2" (   ('001' '<=+' '001'))} 
+  {ut.assert_logic N "'<=+'_3" ('~'('001' '<=+' '000'))} 
+  {ut.assert_logic N "'<=+'_4" (   ('001' '<=+' '010'))} 
+  {ut.assert_logic N "'<=+'_5" ('~'('001' '<=+' '110'))} 
+
+  {ut.assert_equal N "'>='_1" (width ('00' '>=' '00')) 1}
+  {ut.assert_logic N "'>='_2" (   ('001' '>=' '001'))} 
+  {ut.assert_logic N "'>='_3" (   ('001' '>=' '000'))} 
+  {ut.assert_logic N "'>='_4" ('~'('001' '>=' '010'))} 
+  {ut.assert_logic N "'>='_5" ('~'('001' '>=' '110'))} 
+
+  {ut.assert_equal N "'>=+'_1" (width ('00' '>=+' '00')) 1}
+  {ut.assert_logic N "'>=+'_2" (   ('001' '>=+' '001'))} 
+  {ut.assert_logic N "'>=+'_3" (   ('001' '>=+' '000'))} 
+  {ut.assert_logic N "'>=+'_4" ('~'('001' '>=+' '010'))} 
+  {ut.assert_logic N "'>=+'_5" (   ('001' '>=+' '110'))} 
+
+  {ut.assert_equal N "'<<'_1" (width ('00' '<<' 1)) 2}
+  {ut.assert_logic N "'<<'_2" (('011' '<<' 0) '==' '011')}
+  {ut.assert_logic N "'<<'_3" (('011' '<<' 2) '==' '100')}
+
+  {ut.assert_equal N "'>>'_1" (width ('000' '>>' 2)) 3}
+  {ut.assert_logic N "'>>'_2" (('011' '>>' 0) '==' '011')}
+  {ut.assert_logic N "'>>'_3" (('011' '>>' 1) '==' '001')}
+  {ut.assert_logic N "'>>'_4" (('111' '>>' 1) '==' '011')}
+
+  {ut.assert_equal N "'>>+'_1" (width ('000' '>>+' 2)) 3}
+  {ut.assert_logic N "'>>+'_2" (('011' '>>+' 0) '==' '011')}
+  {ut.assert_logic N "'>>+'_3" (('011' '>>+' 1) '==' '001')}
+  {ut.assert_logic N "'>>+'_4" (('111' '>>+' 1) '==' '111')}
+
+  {ut.assert_equal N "'+'_1" (width ('00' '+' '01')) 2}
+  {ut.assert_logic N "'+'_2" (('000' '+' '000') '==' '000')}
+  {ut.assert_logic N "'+'_3" (('001' '+' '011') '==' '100')}
+  {ut.assert_logic N "'+'_4" (('101' '+' '011') '==' '000')}
+  {ut.assert_logic N "'+'_5" (('100' '+' '011') '==' '111')}
+
+  {ut.assert_equal N "'-'_1" (width ('00' '-' '01')) 2}
+  {ut.assert_logic N "'-'_2" (('000' '-' '000') '==' '000')}
+  {ut.assert_logic N "'-'_3" (('000' '-' '010') '==' '110')}
+  {ut.assert_logic N "'-'_4" (('110' '-' '001') '==' '101')}
+  {ut.assert_logic N "'-'_5" (('0x01A40000' '-' '0xFFFEC000') '==' '0x01A54000')}
+  
+  {ut.assert_equal N "'*'_1" (width ('00' '*' '00')) 4}
+  {ut.assert_equal N "'*'_2" (width ('00' '*' '000')) 5}
+  {ut.assert_logic N "'*'_3" (('000' '*' '101') '==' '000000')}
+  {ut.assert_logic N "'*'_4" (('001' '*' '101') '==' '000101')}
+  {ut.assert_logic N "'*'_5" (('101' '*' '100') '==' '010100')}
+  {ut.assert_logic N "'*'_6" (('111' '*' '11') '==' '10101')}
+
+  {ut.assert_equal N "'*+'_1" (width ('0' '*+' '00')) 3}
+  {ut.assert_equal N "'*+'_2" (width ('0' '*+' '000')) 4}
+  {ut.assert_logic N "'*+'_3" (('000' '*+' '101') '==' '000000')}
+  {ut.assert_logic N "'*+'_4" (('001' '*+' '101') '==' '111101')}
+  {ut.assert_logic N "'*+'_5" (('011' '*+' '011') '==' '001001')}
+  {ut.assert_logic N "'*+'_6" (('111' '*+' '11') '==' '00001')}
+  {ut.assert_logic N "'*+'_7" (('0x000005FC' '*+' '0xFFF08000') '==' '0xFFFFFFFFA33E0000')}
+
+  {ut.assert_equal N "(width)_1" (width '') 0}
+  {ut.assert_equal N "(width)_2" (width '00') 2}
+  {ut.assert_equal N "(width)_3" (width '0xAB') 8}
+
+  {ut.assert_equal N "('msb')_1" (width 'msb' '0') 1}
+  {ut.assert_equal N "('msb')_2" (width 'msb' '000') 1}
+  {ut.assert_logic N "('msb')_3" (('msb' '001') '==' '0')}
+  {ut.assert_logic N "('msb')_4" (('msb' '100') '==' '1')}
+
+  {ut.assert_equal N "('lsb')_1" (width 'lsb' '0') 1}
+  {ut.assert_equal N "('lsb')_2" (width 'lsb' '000') 1}
+  {ut.assert_logic N "('lsb')_3" (('lsb' '001') '==' '1')}
+  {ut.assert_logic N "('lsb')_4" (('lsb' '100') '==' '0')}
+
+  {ut.assert_equal N "('msbs')_1" (width 'msbs' '0') 0}
+  {ut.assert_equal N "('msbs')_2" (width 'msbs' '000') 2}
+  {ut.assert_logic N "('msbs')_3" (('msbs' '011') '==' '01')}
+  {ut.assert_logic N "('msbs')_4" (('msbs' '110') '==' '11')}
+
+  {ut.assert_equal N "('lsbs')_1" (width 'lsbs' '0') 0}
+  {ut.assert_equal N "('lsbs')_2" (width 'lsbs' '000') 2}
+  {ut.assert_logic N "('lsbs')_3" (('lsbs' '011') '==' '11')}
+  {ut.assert_logic N "('lsbs')_4" (('lsbs' '110') '==' '10')}
+
+  {ut.assert_equal N "(')_1" (width '0000''[3 : 0]) 4}
+  {ut.assert_equal N "(')_2" (width '0000''[1 : 2]) 2}
+  {ut.assert_logic N "(')_3" (('00010111''[] '++' '010') '==' '010')}
+  {ut.assert_logic N "(')_4" (('00010111''[7 : 0]) '==' '00010111')}
+  {ut.assert_logic N "(')_5" (('00010111''[0 : 7]) '==' '11101000')}
+  {ut.assert_logic N "(')_6" (('00010111''[7 5 3 1 0 2 4 6]) '==' '00011110')}
+  {ut.assert_logic N "(')_7" (1'0     '==' '0')}
+  {ut.assert_logic N "(')_8" (3'-1    '==' '111')}
+  {ut.assert_logic N "(')_9" (8'0xABC '==' '0xBC')}
+
+  local bits is
+    {list_of_bits '001101' bits}
+    {ut.assert_equal N "list_of_bits_0" (length bits) 6}
+    {ut.assert_logic N "list_of_bits_1" ({List.nth bits 0 $} '==' '0')}
+    {ut.assert_logic N "list_of_bits_2" ({List.nth bits 1 $} '==' '0')}
+    {ut.assert_logic N "list_of_bits_3" ({List.nth bits 2 $} '==' '1')}
+    {ut.assert_logic N "list_of_bits_4" ({List.nth bits 3 $} '==' '1')}
+    {ut.assert_logic N "list_of_bits_5" ({List.nth bits 4 $} '==' '0')}
+    {ut.assert_logic N "list_of_bits_6" ({List.nth bits 5 $} '==' '1')}
+  end
+
+  {ut.assert_logic N "all_bits_high_1" ('~' {all_bits_high '0011' $})}
+  {ut.assert_logic N "all_bits_high_2"      {all_bits_high '1111' $}}
+  {ut.assert_logic N "all_bits_high_3" ('~' {all_bits_high '0000' $})}
+
+  {ut.assert_logic N "all_bits_low_1" ('~' {all_bits_low '0011' $})}
+  {ut.assert_logic N "all_bits_low_2" ('~' {all_bits_low '1111' $})}
+  {ut.assert_logic N "all_bits_low_3"      {all_bits_low '0000' $}}
+
+  {ut.assert_logic N "all_bits_same_1" ('~' {all_bits_same '0011' $})}
+  {ut.assert_logic N "all_bits_same_2"      {all_bits_same '1111' $}}
+  {ut.assert_logic N "all_bits_same_3"      {all_bits_same '0000' $}}
+
+  {ut.assert_logic N "mux_1" ({mux '00' ['00' '01' '10' '11'] $} '==' '00')}
+  {ut.assert_logic N "mux_2" ({mux '01' ['00' '01' '10' '11'] $} '==' '01')}
+  {ut.assert_logic N "mux_3" ({mux '10' ['00' '01' '10' '11'] $} '==' '10')}
+  {ut.assert_logic N "mux_4" ({mux '11' ['00' '01' '10' '11'] $} '==' '11')}
+
+  {ut.assert_logic N "truth_table_1" ({truth_table [["0-" "00"] ["10" "10"] ["11" "11"]] '00' $} '==' '00')}
+  {ut.assert_logic N "truth_table_2" ({truth_table [["0-" "00"] ["10" "10"] ["11" "11"]] '01' $} '==' '00')}
+  {ut.assert_logic N "truth_table_3" ({truth_table [["0-" "00"] ["10" "10"] ["11" "11"]] '10' $} '==' '10')}
+  {ut.assert_logic N "truth_table_4" ({truth_table [["0-" "00"] ["10" "10"] ["11" "11"]] '11' $} '==' '11')}
+
+  {ut.assert_logic N "decoder_1" ({decoder '0' '00' $} '==' '0000')}
+  {ut.assert_logic N "decoder_2" ({decoder '0' '01' $} '==' '0000')}
+  {ut.assert_logic N "decoder_3" ({decoder '0' '10' $} '==' '0000')}
+  {ut.assert_logic N "decoder_4" ({decoder '0' '11' $} '==' '0000')}
+  {ut.assert_logic N "decoder_5" ({decoder '1' '00' $} '==' '0001')}
+  {ut.assert_logic N "decoder_6" ({decoder '1' '01' $} '==' '0010')}
+  {ut.assert_logic N "decoder_7" ({decoder '1' '10' $} '==' '0100')}
+  {ut.assert_logic N "decoder_8" ({decoder '1' '11' $} '==' '1000')}
+
+  {ut.assert_logic N "state_machine_1" ({state_machine [(i:"--11" s:"0" n:"1" o:"00")] '0000' $} '==' '00')}
+
+end
+
