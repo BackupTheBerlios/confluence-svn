@@ -1,6 +1,6 @@
 (*
     Confluence System Design Language Compiler
-    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+    Copyright (C) 2003-2005 Tom Hawkins (tomahawkins@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -92,10 +92,11 @@ let rec evalArgs argExprs renv portValues index =
 ;;
       
 (** Applies a new instance. *)
-let applyComponent appRenv appLoc comp argCount argExprs =
-  let compRenv, compLoc, arity, portNames, compStmts = CfTypes.getCompInfo comp in
+let applyComponent appRenv appLoc system_name comp argCount argExprs =
+  (* XXX Clean this up. *)
+  let compRenv, compLoc, arity, component_name, portNames, compStmts = CfTypes.getCompInfo comp in
   if argCount <> arity  then raise (CfTypes.Error ("Number of instantiation arguments (" ^ string_of_int argCount ^ ") does not match number of component ports (" ^ string_of_int arity ^ ").\n\n  Instance Location: " ^ Loc.toString appLoc ^ "\n\n  Component Location: " ^ Loc.toString compLoc));
-  let subRenv = CfTypes.extendEnv appRenv appLoc (compRenv, compLoc, arity, portNames, compStmts) in
+  let subRenv = CfTypes.extendEnv appRenv appLoc (compRenv, compLoc, arity, component_name, portNames, compStmts) system_name in
   evalArgs argExprs appRenv (CfTypes.getRenvValues subRenv) 0;
   compStmts subRenv;
   subRenv
@@ -112,20 +113,20 @@ expr    : renv -> variable -> unit
 let rec compExpr cenv ast =
   let expr =
     match ast with
-    | CfAst.Apply       (loc, comp, args)       -> compApply       cenv loc comp args
-    | CfAst.Connect     (loc, expr0, expr1)     -> compConnect     cenv loc expr0 expr1
-    | CfAst.Cond        (loc, p, t, f)          -> compCond        cenv loc p t f
-    | CfAst.Name        (loc, name)             -> compName        cenv loc name
-    | CfAst.DotName     (loc, sys, name)        -> compDotName     cenv loc sys name
-    | CfAst.DotPosition (loc, sys, position)    -> compDotPosition cenv loc sys position
-    | CfAst.Comp        (loc, ports, stmts)     -> compComponent   cenv loc ports stmts
-    | CfAst.Prim        (loc, name, ports)      -> compPrimitive   cenv loc name ports
-    | CfAst.Integer     (loc, i)                -> compInteger     cenv loc i
-    | CfAst.Float       (loc, f)                -> compFloat       cenv loc f
-    | CfAst.Boolean     (loc, b)                -> compBoolean     cenv loc b
-    | CfAst.Vector      (loc, s)                -> compVector      cenv loc s
-    | CfAst.Record      (loc, fields)           -> compRecord      cenv loc fields
-    | CfAst.Free        loc                     -> compFree        cenv loc
+    | CfAst.Apply       (loc, ann, comp, args)   -> compApply       cenv loc ann comp args
+    | CfAst.Connect     (loc, expr0, expr1)      -> compConnect     cenv loc expr0 expr1
+    | CfAst.Cond        (loc, p, t, f)           -> compCond        cenv loc p t f
+    | CfAst.Name        (loc, name)              -> compName        cenv loc name
+    | CfAst.DotName     (loc, sys, name)         -> compDotName     cenv loc sys name
+    | CfAst.DotPosition (loc, sys, position)     -> compDotPosition cenv loc sys position
+    | CfAst.Comp        (loc, ann, ports, stmts) -> compComponent   cenv loc ann ports stmts
+    | CfAst.Prim        (loc, name, ports)       -> compPrimitive   cenv loc name ports
+    | CfAst.Integer     (loc, i)                 -> compInteger     cenv loc i
+    | CfAst.Float       (loc, f)                 -> compFloat       cenv loc f
+    | CfAst.Boolean     (loc, b)                 -> compBoolean     cenv loc b
+    | CfAst.Vector      (loc, s)                 -> compVector      cenv loc s
+    | CfAst.Record      (loc, fields)            -> compRecord      cenv loc fields
+    | CfAst.Free        loc                      -> compFree        cenv loc
   in
   let taskedExpr renv variable =
     CfTypes.readyTask (renv, fun () -> expr renv variable)
@@ -157,7 +158,7 @@ and compStmts cenv astStmts =
       in
         (fun renv -> stmt renv; stmts renv)
 
-and compApply cenv loc astComp astArgs =
+and compApply cenv loc system_name astComp astArgs =
   setLocation loc;
   let exprComp = compExpr cenv astComp in
   let exprArgs = List.map (function astArg  -> compExpr cenv astArg)  astArgs in
@@ -166,7 +167,7 @@ and compApply cenv loc astComp astArgs =
   let expr renv system =
     CfTypes.setLocation loc;
     let comp = CfTypes.newFreeWithTask renv (fun comp ->
-      CfTypes.unify system (CfTypes.newSystem (applyComponent renv loc comp argCount exprArgs))
+      CfTypes.unify system (CfTypes.newSystem (applyComponent renv loc system_name comp argCount exprArgs))
     ) in
     exprComp renv comp
   in
@@ -234,7 +235,7 @@ and compDotPosition cenv loc astSysOrRec position =
   in
     expr
     
-and compComponent cenv loc ports astStmts =
+and compComponent cenv loc component_name ports astStmts =
   setLocation loc;
   let subCenv = extendEnv cenv ports in
   let ports = Array.of_list ports in
@@ -242,7 +243,7 @@ and compComponent cenv loc ports astStmts =
   let arity = Array.length ports in
   let expr renv result =
     CfTypes.setLocation loc;
-    CfTypes.unify result (CfTypes.newComp (renv, loc, arity, ports, stmts))
+    CfTypes.unify result (CfTypes.newComp (renv, loc, arity, component_name, ports, stmts))
   in
     expr
 
@@ -259,7 +260,7 @@ and compPrimitive cenv loc name ports =
   in
   let expr renv result =
     CfTypes.setLocation loc;
-    CfTypes.unify result (CfTypes.newComp (renv, loc, arity, ports, stmts))
+    CfTypes.unify result (CfTypes.newComp (renv, loc, arity, name, ports, stmts))
   in
     expr
 

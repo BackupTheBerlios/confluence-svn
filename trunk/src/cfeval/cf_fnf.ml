@@ -23,9 +23,11 @@ open Fnf_core;;
 
 type producer = cell;;
 
+type scope_holder = No_scope of string * string | Scope of scope;;
+
 type system = System      of system *          (* Parent system. *)
                              int *             (* SysId. *)
-                             scope *           (* FNF scope. *)
+                             scope_holder ref *    (* FNF scope. *)
                              bool ref *        (* Cre determined. *)
                              string ref *      (* Clock domain. *)
                              producer ref *    (* Reset. *)
@@ -51,17 +53,24 @@ let sub_enables = Hashtbl.create 64;;    (* SysId to producer IdSet. *)
 let next_system_id  = ref 0;;            (* Next SysId. *)
 let statefuls  = ref [];;                (* list of stateful components. *)
 
-let fnf  = create_root_scope "top";;
+let fnf  = create_root_scope "top";; (* XXX *)
+ 
 let zero = create_const fnf "0";;
 let one  = create_const fnf "1";;
 
 
 (** System Functions *)
 
-let scope_of_system system =
+let rec scope_of_system system =
   match system with
-  | System_root (_, scope, _, _, _)
-  | System (_, _, scope, _, _, _, _, _) -> scope
+  | System_root (_, scope, _, _, _) -> scope
+  | System (parent, _, scope, _, _, _, _, _) ->
+    (match !scope with
+    | No_scope (module_name, instance_name) ->
+        let new_scope = create_sub_scope (scope_of_system parent) module_name instance_name in
+        scope := Scope new_scope;
+        new_scope
+    | Scope scope -> scope)
 ;;
 
 let id_of_system system =
@@ -79,14 +88,13 @@ let locs_of_system system =
 let new_root_system () =
   let id = !next_system_id in
   incr next_system_id;
-  let space = fnf in
-  System_root (id, space, "clock", zero, one)
+  System_root (id, fnf, "clock", zero, one)
 ;;
 
-let new_sub_system parent instance_locs component_loc =
+let new_sub_system parent module_name instance_name instance_locs component_loc =
   let id = !next_system_id in
   incr next_system_id;
-  System (parent, id, fnf (* XXX create_sub_scope (scope_of_system parentSys) "unknown" "unknown" *), ref false, ref "", ref zero, ref one, instance_locs)
+  System (parent, id, ref (No_scope (module_name, instance_name)), ref false, ref "", ref zero, ref one, instance_locs)
 ;;
   
 (** Determine the clock, reset, and enable for a system. *)

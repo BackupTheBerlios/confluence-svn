@@ -43,7 +43,7 @@ and value    = Free      of slot list ref * variable list ref
              | Vector0
              | Record    of int * string array * variable array
              | System    of renv
-             | Comp      of renv * Loc.loc * int * string array * (renv -> unit)
+             | Comp      of renv * Loc.loc * int * string * string array * (renv -> unit)
              | Property  of property
 
 and property = PropertyVector of Cf_fnf.producer
@@ -708,8 +708,8 @@ let rec listToIntList v =
 
 (* Component (and Primitive) Functions *)
 
-let newComp (defRenv, compLoc, arity, portNames, stmt) =
-  ref (Comp (defRenv, compLoc, arity, portNames, stmt))
+let newComp (defRenv, compLoc, arity, component_name, portNames, stmt) =
+  ref (Comp (defRenv, compLoc, arity, component_name, portNames, stmt))
 ;;
 
 let isComp v =
@@ -720,7 +720,7 @@ let isComp v =
 
 let getCompInfo v =
   match !v with
-    Comp (defRenv, compLoc, arity, portNames, stmt) -> (defRenv, compLoc, arity, portNames, stmt)
+    Comp (defRenv, compLoc, arity, component_name, portNames, stmt) -> (defRenv, compLoc, arity, component_name, portNames, stmt)
   | _ -> raise (Error (typeError v "Component"))
 ;;
 
@@ -760,11 +760,11 @@ let newEnvRoot () =
   rootRenv
 ;;
 
-let extendEnv appRenv appLoc (compRenv, compLoc, arity, portNames, _) =
+let extendEnv appRenv appLoc (compRenv, compLoc, arity, component_name, portNames, _) system_name =
   let portValues = Array.make arity (newFree ()) in
   let appLocs = appLoc :: appRenv.renvAppLocs in
   let renv = {
-    renvId = Cf_fnf.new_sub_system (getEnvId appRenv) appLocs compLoc;
+    renvId = Cf_fnf.new_sub_system (getEnvId appRenv) component_name system_name appLocs compLoc;
     renvParent = compRenv;
     renvCompLoc = compLoc;
     renvAppLocs = appLocs;

@@ -39,8 +39,8 @@ val get_current_token      : unit -> string;;
 (** Parser Transformations *)
 
 val free_arg_list                  : Loc.loc -> string list -> CfAst.expr list;;
-val application_expr_of_namespace  : Loc.loc -> string list -> CfAst.stmt list -> CfAst.expr;;
-val application_of_namespace       : Loc.loc -> string list -> CfAst.stmt list -> CfAst.stmt;;   (* location, names, stmts *)
+val application_expr_of_namespace  : Loc.loc -> string -> string list -> CfAst.stmt list -> CfAst.expr;;
+val application_of_namespace       : Loc.loc -> string -> string list -> CfAst.stmt list -> CfAst.stmt;;   (* location, names, stmts *)
 val select_position                : Loc.loc -> CfAst.expr -> int -> CfAst.expr;;
 val connect_name                   : Loc.loc -> (Loc.loc * string) -> CfAst.expr -> CfAst.expr;;
 val stmt_of_comp_named             : Loc.loc -> (Loc.loc * string) -> string list -> CfAst.stmt list -> CfAst.stmt;;

@@ -20,12 +20,12 @@
 
 exception CfAstError;;
 
-type expr     = Apply       of Loc.loc * expr * expr list  (* location, comp, arg list. *)
-              | Connect     of Loc.loc * expr * expr             (* location, sink expr, source expr. *)
-              | Cond        of Loc.loc * expr * expr * expr                    (* predicate, true, false *)
+type expr     = Apply       of Loc.loc * string * expr * expr list        (* location, annotation, comp, arg list. *)
+              | Connect     of Loc.loc * expr * expr                      (* location, sink expr, source expr. *)
+              | Cond        of Loc.loc * expr * expr * expr               (* location, predicate, true, false *)
               | Name        of Loc.loc * string
-              | Comp        of Loc.loc * string list * stmt list         (* ports, statements *)
-              | Prim        of Loc.loc * string * string list            (* primitive name, ports *)
+              | Comp        of Loc.loc * string * string list * stmt list (* location, annotation, ports, statements *)
+              | Prim        of Loc.loc * string * string list             (* location, primitive name, ports *)
               | DotName     of Loc.loc * expr * string
               | DotPosition of Loc.loc * expr * Intbig.intbig
               | Integer     of Loc.loc * Intbig.intbig

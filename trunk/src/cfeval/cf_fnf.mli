@@ -32,7 +32,7 @@ type system;;
 val width_of_producer  : producer -> int;;
 
 val new_root_system   : unit -> system;;
-val new_sub_system    : system -> Loc.loc list -> Loc.loc -> system;;
+val new_sub_system    : system -> string -> string -> Loc.loc list -> Loc.loc -> system;;
 
 val set_clock_domain : system -> string   -> (string -> unit) -> unit;;
 val add_sub_enable   : system -> producer -> (string -> unit) -> unit;;

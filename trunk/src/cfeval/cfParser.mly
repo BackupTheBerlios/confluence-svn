@@ -1,6 +1,6 @@
 /*
     Confluence System Design Language Compiler
-    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+    Copyright (C) 2003-2005 Tom Hawkins (tomahawkins@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -132,8 +132,8 @@ file
   ;
 
 file_application
-  : component_ports IS statements    { ($1, CfAst.Apply (CfParserUtil.current_file_loc (), CfAst.Comp (CfParserUtil.current_file_loc (), $1, $3), CfParserUtil.free_arg_list (CfParserUtil.current_file_loc ()) $1)) }
-  | component_ports name_space_sugar { ($1, CfAst.Apply (CfParserUtil.current_file_loc (), CfAst.Comp (CfParserUtil.current_file_loc (), $1, $2), CfParserUtil.free_arg_list (CfParserUtil.current_file_loc ()) $1)) }
+  : component_ports IS statements    { ($1, CfAst.Apply (CfParserUtil.current_file_loc (), "", CfAst.Comp (CfParserUtil.current_file_loc (), "", $1, $3), CfParserUtil.free_arg_list (CfParserUtil.current_file_loc ()) $1)) }
+  | component_ports name_space_sugar { ($1, CfAst.Apply (CfParserUtil.current_file_loc (), "", CfAst.Comp (CfParserUtil.current_file_loc (), "", $1, $2), CfParserUtil.free_arg_list (CfParserUtil.current_file_loc ()) $1)) }
   ;
 
 statements
@@ -150,11 +150,13 @@ statement
   ;
 
 name_space
-  : LOCAL locals IS statements  END { CfParserUtil.application_expr_of_namespace (fst $1) $2 $4 }
+  : LOCAL locals IS statements  END { CfParserUtil.application_expr_of_namespace (fst $1) "" $2 $4 }
+  /* XXX annotate namespace */
   ;
 
 name_space_sugar
-  : WITH locals IS statements { [CfParserUtil.application_of_namespace (fst $1) $2 $4] }
+  : WITH locals IS statements { [CfParserUtil.application_of_namespace (fst $1) "" $2 $4] }
+  /* XXX annotate namespace */
   ;
 
 locals
@@ -251,8 +253,8 @@ nil
   ;
 
 component_anon
-  : COMP component_ports IS statements    END  { CfAst.Comp (fst $1, $2, $4) }
-  | COMP component_ports name_space_sugar END  { CfAst.Comp (fst $1, $2, $3) }
+  : COMP component_ports IS statements    END  { CfAst.Comp (fst $1, "", $2, $4) }
+  | COMP component_ports name_space_sugar END  { CfAst.Comp (fst $1, "", $2, $3) }
   ;
 
 component_ports
@@ -266,16 +268,16 @@ primitive
 
 application
   : BRACE_LEFT expression_nonop arguments BRACE_RIGHT
-    { CfAst.Apply (fst $1, $2, $3) }
+    { CfAst.Apply (fst $1, "", $2, $3) }
   | BRACE_LEFT IDENTIFIER COLON expression_nonop arguments BRACE_RIGHT
-    { CfParserUtil.connect_name (fst $3) $2 (CfAst.Apply (fst $1, $4, $5)) }
+    { CfParserUtil.connect_name (fst $3) $2 (CfAst.Apply (fst $1, snd $2, $4, $5)) }
   ;
 
 func
   : BRACE_LEFT expression_nonop arguments direction_marker DOLLAR arguments BRACE_RIGHT
-    { CfParserUtil.select_position (fst $5)                                        (CfAst.Apply (fst $1, $2, ($3 @ (CfAst.Free (fst $5) :: $6))))  (List.length $3 + 1) }
+    { CfParserUtil.select_position (fst $5)                                        (CfAst.Apply (fst $1, "", $2, ($3 @ (CfAst.Free (fst $5) :: $6))))  (List.length $3 + 1) }
   | BRACE_LEFT IDENTIFIER COLON expression_nonop arguments direction_marker DOLLAR arguments BRACE_RIGHT
-    { CfParserUtil.select_position (fst $7) (CfParserUtil.connect_name (fst $3) $2 (CfAst.Apply (fst $1, $4, ($5 @ (CfAst.Free (fst $7) :: $8))))) (List.length $5 + 1) }
+    { CfParserUtil.select_position (fst $7) (CfParserUtil.connect_name (fst $3) $2 (CfAst.Apply (fst $1, snd $2, $4, ($5 @ (CfAst.Free (fst $7) :: $8))))) (List.length $5 + 1) }
   ;
 
 arguments

@@ -1,6 +1,6 @@
 (*
     Confluence System Design Language Compiler
-    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+    Copyright (C) 2003-2005 Tom Hawkins (tomahawkins@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -158,7 +158,7 @@ let parse_program main_file lexer parser =
   Queue.add main_file to_parse;
   parse_all_files parse_channel;
   let file_names = build_file_names !files in
-  let main_ast = insert_sub_asts (CfAst.Apply (loc, CfAst.Comp (loc, file_names, []), free_arg_list loc file_names)) !top_files in
+  let main_ast = insert_sub_asts (CfAst.Apply (loc, "", CfAst.Comp (loc, "", file_names, []), free_arg_list loc file_names)) !top_files in
   clear_stateful ();
   main_ast
 ;;
@@ -212,13 +212,13 @@ let get_current_token () =
 (* Parser Transformations *)
 
 (** Transforms a namespace in an expression. *)
-let application_expr_of_namespace loc names stmts =
-  CfAst.Apply (loc, CfAst.Comp (loc, names, stmts), free_arg_list loc names)
+let application_expr_of_namespace loc annotation names stmts =
+  CfAst.Apply (loc, annotation, CfAst.Comp (loc, annotation, names, stmts), free_arg_list loc names)
 ;;
 
 (** Transforms a namespace in a statement. *)
-let application_of_namespace loc names stmts =
-  CfAst.ApplyStmt (application_expr_of_namespace loc names stmts)
+let application_of_namespace loc annotation names stmts =
+  CfAst.ApplyStmt (application_expr_of_namespace loc annotation names stmts)
 ;;
 
 (** Selects position from system or record expression. *)
@@ -233,19 +233,19 @@ let connect_name loc (name_loc, name) expr =
 
 (** Creates a statement from a named component. *)
 let stmt_of_comp_named comp_loc (name_loc, name) ports stmts =
-  CfAst.ConnectStmt (connect_name comp_loc (name_loc, name) (CfAst.Comp (comp_loc, ports, stmts)))
+  CfAst.ConnectStmt (connect_name comp_loc (name_loc, name) (CfAst.Comp (comp_loc, name, ports, stmts)))
 ;;
 
 let application_of_prefix (op_loc, op_name) a =
-  select_position op_loc (CfAst.Apply (op_loc, CfAst.Name (op_loc, "(" ^ op_name ^ ")"), [a; CfAst.Free op_loc])) 2
+  select_position op_loc (CfAst.Apply (op_loc, "", CfAst.Name (op_loc, "(" ^ op_name ^ ")"), [a; CfAst.Free op_loc])) 2
 ;;
 
 let application_of_infix (op_loc, op_name) a b =
-  select_position op_loc (CfAst.Apply (op_loc, CfAst.Name (op_loc, "(" ^ op_name ^ ")"), [a; b; CfAst.Free op_loc])) 3
+  select_position op_loc (CfAst.Apply (op_loc, "", CfAst.Name (op_loc, "(" ^ op_name ^ ")"), [a; b; CfAst.Free op_loc])) 3
 ;;
 
 let application_of_trifix (op_loc, op_name) a b c =
-  select_position op_loc (CfAst.Apply (op_loc, CfAst.Name (op_loc, "(" ^ op_name ^ ")"), [a; b; c; CfAst.Free op_loc])) 4
+  select_position op_loc (CfAst.Apply (op_loc, "", CfAst.Name (op_loc, "(" ^ op_name ^ ")"), [a; b; c; CfAst.Free op_loc])) 4
 ;;
 
 let conditional_of_ifelse loc p ts fs =
@@ -253,8 +253,8 @@ let conditional_of_ifelse loc p ts fs =
   CfAst.ConnectStmt (CfAst.Connect (loc, CfAst.Free loc, (CfAst.Cond
     (loc,
     p,
-    (CfAst.Apply (loc, CfAst.Comp (loc, [], ts), [])),
-    (CfAst.Apply (loc, CfAst.Comp (loc, [], fs), []))
+    (CfAst.Apply (loc, "", CfAst.Comp (loc, "", [], ts), [])),
+    (CfAst.Apply (loc, "", CfAst.Comp (loc, "", [], fs), []))
     ))));;
   
 let format_string  s =
@@ -284,7 +284,7 @@ let rec application_of_string loc s =
     if String.length s == 0 then
       CfAst.Record (loc, [])
     else
-      select_position loc (CfAst.Apply (loc, CfAst.Name (loc, "(::)"),
+      select_position loc (CfAst.Apply (loc, "", CfAst.Name (loc, "(::)"),
         [CfAst.Integer (loc, Intbig.intbig_of_char (String.get s 0));
          application_of_string loc (String.sub s 1 (String.length s - 1));
          CfAst.Free loc]

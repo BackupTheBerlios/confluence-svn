@@ -1,6 +1,6 @@
 (*
     Confluence System Design Language Compiler
-    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+    Copyright (C) 2003-2005 Tom Hawkins (tomahawkins@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,12 +20,12 @@
 
 exception CfAstError;;
 
-type expr     = Apply       of Loc.loc * expr * expr list        (* location, comp, arg list. *)
-              | Connect     of Loc.loc * expr * expr             (* location, sink expr, source expr. *)
-              | Cond        of Loc.loc * expr * expr * expr                    (* predicate, true, false *)
+type expr     = Apply       of Loc.loc * string * expr * expr list        (* location, annotation, comp, arg list. *)
+              | Connect     of Loc.loc * expr * expr                      (* location, sink expr, source expr. *)
+              | Cond        of Loc.loc * expr * expr * expr               (* location, predicate, true, false *)
               | Name        of Loc.loc * string
-              | Comp        of Loc.loc * string list * stmt list         (* ports, statements *)
-              | Prim        of Loc.loc * string * string list            (* primitive name, ports *)
+              | Comp        of Loc.loc * string * string list * stmt list (* location, annotation, ports, statements *)
+              | Prim        of Loc.loc * string * string list             (* location, primitive name, ports *)
               | DotName     of Loc.loc * expr * string
               | DotPosition of Loc.loc * expr * Intbig.intbig
               | Integer     of Loc.loc * Intbig.intbig
@@ -41,11 +41,11 @@ and  stmt     = ApplyStmt   of expr
 
 let expr_loc expr =
   match expr with
-    Apply       (loc, _, _)
+    Apply       (loc, _, _, _)
   | Connect     (loc, _, _)
   | Cond        (loc, _, _, _)
   | Name        (loc, _)
-  | Comp        (loc, _, _)
+  | Comp        (loc, _, _, _)
   | Prim        (loc, _, _)
   | DotName     (loc, _, _)
   | DotPosition (loc, _, _)
@@ -67,8 +67,8 @@ let stmt_loc stmt =
 let add_sub_env apply_parent apply_sub sub_name =
   let loc = expr_loc apply_sub in
   match apply_parent with
-    Apply (app_loc, Comp (comp_loc, ports, l), free_args) ->
-      Apply (app_loc, Comp (comp_loc, ports, (l @ [ConnectStmt (Connect (loc, Name (loc, sub_name), apply_sub))])), free_args)
+    Apply (app_loc, sys_ann, Comp (comp_loc, comp_ann, ports, l), free_args) ->
+      Apply (app_loc, sys_ann, Comp (comp_loc, comp_ann, ports, (l @ [ConnectStmt (Connect (loc, Name (loc, sub_name), apply_sub))])), free_args)
   | _ -> Report.fatal "Invalid file application."; raise CfAstError;;
 
 
@@ -99,7 +99,7 @@ and writeStringList names =
 
 and write_expr a i =
   match a with
-    Apply (l, e, ports) ->
+    Apply (l, _, e, ports) ->
       write (i ^ "CfAst.Apply (\n");
       write_loc l (id i); write (",\n");
       write_expr e (id i);
@@ -133,7 +133,7 @@ and write_expr a i =
       write ((id i) ^ "\"" ^ String2.replace_meta_chars b ^ "\"\n");
       write (i ^ ")\n")
 
-  | Comp (l, ports, s) ->
+  | Comp (l, _, ports, s) ->
       write (i ^ "CfAst.Comp (\n");
       write_loc l (id i); write (",\n");
       write (id i); writeStringList ports;  write (",\n");

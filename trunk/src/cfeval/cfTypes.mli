@@ -155,9 +155,9 @@ val listToIntList     : variable -> int list;;
 
 (** Components *)
 
-val newComp     : (renv * Loc.loc * int * string array * (renv -> unit)) -> variable;;
+val newComp     : (renv * Loc.loc * int * string * string array * (renv -> unit)) -> variable;;
 val isComp      : variable -> bool;;
-val getCompInfo : variable -> (renv * Loc.loc * int * string array * (renv -> unit))
+val getCompInfo : variable -> (renv * Loc.loc * int * string * string array * (renv -> unit))
 
 
 (** Systems *)
@@ -172,7 +172,7 @@ val getPorts    : variable -> variable;;
 
 val getEnvId       : renv -> Cf_fnf.system;;
 val newEnvRoot     : unit -> renv;;
-val extendEnv      : renv -> Loc.loc -> (renv * Loc.loc * int * string array * 'a) -> renv;;
+val extendEnv      : renv -> Loc.loc -> (renv * Loc.loc * int * string * string array * 'a) -> string -> renv;;
 val getRelativeEnv : renv -> int -> renv;;
 val getRenvValues  : renv -> variable array;;
 
