@@ -79,10 +79,9 @@ let allocate_cell cell =
       add_cell_index cell !next_index;
       next_index := !next_index + (words_of_width w)
 
-  | Select (_, bits) ->
-      let w = List.length bits in
+  | Select (_, bit) ->
       add_cell_index cell !next_index;
-      next_index := !next_index + (words_of_width w)
+      next_index := !next_index + 1
 
   | Eq _
   | Lt _ ->
@@ -319,7 +318,7 @@ let calc_cell cell =
   | Concat (wl, wr) ->
       write ("  // concat");
 
-  | Select (w, bits) ->
+  | Select (w, bit) ->
       write ("  // select");
 
   | Eq     w ->

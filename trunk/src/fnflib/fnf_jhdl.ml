@@ -176,18 +176,11 @@ let rec output_logic scope_item =
 	  write ("    //Concat: " ^ id);
 	  write ("      concat_o(" ^ input 0 ^ ", " ^ input 1 ^ ", " ^ id ^ ", \"Concat_" ^ id ^ "\");")
 	  
-      | Select (w, bits) ->
+      | Select (w, bit)  ->
 	  write ("    //Select: " ^ id);
 	  write ("      WireList " ^ id ^ "_temp = new WireList();");
-	  
-	  write (String2.join (
-	  	List.map (
-			fun bit -> "      " ^ id ^ "_temp.append( " ^ input 0 ^ ".gw(" ^ string_of_int bit ^ "));"
-			)
-		bits
-		) "\n"
-		);
-	  write("      concat_o(" ^ id ^ "_temp, " ^ id ^ ", \"Select_" ^ id ^ "\");")
+	  write ("      " ^ id ^ "_temp.append( " ^ input 0 ^ ".gw(" ^ string_of_int bit ^ "));");
+	  write ("      concat_o(" ^ id ^ "_temp, " ^ id ^ ", \"Select_" ^ id ^ "\");")
 		
 	  
       | Eq     w         ->

@@ -51,7 +51,7 @@ val new_and         : system -> producer -> producer -> producer;;
 val new_or          : system -> producer -> producer -> producer;;
 val new_xor         : system -> producer -> producer -> producer;;
 val new_concat      : system -> producer -> producer -> producer;;
-val new_select      : system -> producer -> int list -> producer;;
+val new_select      : system -> producer -> int -> producer;;
 val new_equ         : system -> producer -> producer -> producer;;
 val new_lt          : system -> producer -> producer -> producer;;
 val new_add         : system -> producer -> producer -> producer;;

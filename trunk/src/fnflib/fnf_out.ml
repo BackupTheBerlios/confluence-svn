@@ -72,7 +72,7 @@ let rec output_scope_item scope_item =
       | Xor    w         -> write ("(xor    " ^ id ^ string_of_int w ^ inputs ^ ")")
       | Or     w         -> write ("(or     " ^ id ^ string_of_int w ^ inputs ^ ")")
       | Concat (wl, wr)  -> write ("(concat " ^ id ^ string_of_int wl ^ " " ^ string_of_int wr ^ inputs ^ ")")
-      | Select (w, bits) -> write ("(select " ^ id ^ string_of_int w ^ " (" ^ List.fold_left (fun sofar bit -> sofar ^ " " ^ string_of_int bit) (string_of_int (List.hd bits)) (List.tl bits) ^ ")" ^ inputs ^ ")")
+      | Select (w, bit)  -> write ("(select " ^ id ^ string_of_int w ^ " " ^ string_of_int bit ^ " " ^ inputs ^ ")")
       | Eq     w         -> write ("(eq     " ^ id ^ string_of_int w ^ inputs ^ ")")
       | Lt     w         -> write ("(lt     " ^ id ^ string_of_int w ^ inputs ^ ")")
       | Add    w         -> write ("(add    " ^ id ^ string_of_int w ^ inputs ^ ")")

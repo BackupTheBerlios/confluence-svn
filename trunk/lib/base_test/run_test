@@ -3,6 +3,8 @@
 # Invoke Confluence.
 cf base_test.cf
 
+fnf -read_fnf out.fnf -write_fnf out.fnf
+
 # Execute C simulator.
 #echo "! " | ./lib_unit_test
 

@@ -40,7 +40,7 @@ type cell_info = Input  of string * int
                | Xor    of int
                | Or     of int
                | Concat of int * int
-               | Select of int * int list
+               | Select of int * int
                | Eq     of int
                | Lt     of int
                | Add    of int
@@ -109,7 +109,7 @@ val create_and    : scope -> int -> cell * port * port;;
 val create_xor    : scope -> int -> cell * port * port;;
 val create_or     : scope -> int -> cell * port * port;;
 val create_concat : scope -> int -> int -> cell * port * port;;
-val create_select : scope -> int -> int list -> cell * port;;
+val create_select : scope -> int -> int -> cell * port;;
 val create_eq     : scope -> int -> cell * port * port;;
 val create_lt     : scope -> int -> cell * port * port;;
 val create_add    : scope -> int -> cell * port * port;;

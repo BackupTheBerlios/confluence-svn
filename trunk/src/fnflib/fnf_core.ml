@@ -75,7 +75,7 @@ and  cell_info = Input  of string * int
                | Xor    of int
                | Or     of int
                | Concat of int * int
-               | Select of int * int list
+               | Select of int * int
                | Eq     of int
                | Lt     of int
                | Add    of int
@@ -316,7 +316,7 @@ let width_of_cell cell =
   | Xor    w
   | Or     w -> w
   | Concat (a, b) -> a + b
-  | Select (_, bits) -> List.length bits
+  | Select _ -> 1
   | Eq     w
   | Lt     w -> 1
   | Add    w
@@ -518,9 +518,9 @@ let create_concat scope width_left width_right =
 ;;
 
 (** Creates a bit selection. *)
-let create_select scope width bits =
-  if List.exists (fun n -> n >= width || n < 0) bits then raise (Error "Invalid bit select.");
-  let cell = add_new_cell scope (Select (width, bits)) 1 in
+let create_select scope width bit =
+  if bit >= width || bit < 0 then raise (Error "Invalid bit select.");
+  let cell = add_new_cell scope (Select (width, bit)) 1 in
   cell, (cell, 0)
 ;;
 

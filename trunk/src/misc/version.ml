@@ -19,6 +19,6 @@
 
 
 (** Current version of Confluence and FNF. *)
-let version = "0.10.2";;
+let version = "0.10.3";;
 
 

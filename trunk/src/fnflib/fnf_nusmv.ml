@@ -145,16 +145,9 @@ let rec output_scope_item scope_item =
             write ("DEFINE " ^ id ^ "_" ^ string_of_int i ^ " := " ^ input 0 ^ "_" ^ string_of_int (i - wr) ^ ";")
           done
 
-      | Select (w, bits) ->
+      | Select (w, bit) ->
           write ("-- select");
-          let rec select bit_num bits =
-            match bits with
-            | [] -> ()
-            | bit :: bits ->
-                write ("DEFINE " ^ id ^ "_" ^ string_of_int bit_num ^ " := " ^ input 0 ^ "_" ^ string_of_int bit ^ ";");
-                select (bit_num - 1) bits
-          in
-          select (List.length bits - 1) bits
+          write ("DEFINE " ^ id ^ "_0 := " ^ input 0 ^ "_" ^ string_of_int bit ^ ";");
 
       | Eq     w ->
           let rec eq bit =

@@ -247,8 +247,8 @@ let new_concat system p0 p1 =
   cell
 ;;
 
-let new_select system p0 bs =
-  let cell, a = create_select (scope_of_system system) (width_of_cell p0) bs in
+let new_select system p0 bit =
+  let cell, a = create_select (scope_of_system system) (width_of_cell p0) bit in
   connect p0 a;
   cell
 ;;

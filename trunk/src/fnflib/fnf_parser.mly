@@ -169,9 +169,8 @@ id
   : integer { $1 }
   ;
 
-bits
-  :                { [] }
-  |  bits  integer { $2 :: $1 }
+bit
+  : integer { $1 }
   ;
 
 cell
@@ -186,7 +185,7 @@ cell
   | Parenl Xor    id width id id                 Parenr  { let cell, left, right = create_xor  (current_scope ()) $4 in add_cell $3 cell; add_port left $5; add_port right $6 }
   | Parenl Or     id width id id                 Parenr  { let cell, left, right = create_or   (current_scope ()) $4 in add_cell $3 cell; add_port left $5; add_port right $6 }
   | Parenl Concat id width width id id           Parenr  { let cell, left, right = create_concat (current_scope ()) $4 $5 in add_cell $3 cell; add_port left $6; add_port right $7 }
-  | Parenl Select id width Parenl bits Parenr id Parenr  { let cell, data = create_select (current_scope ()) $4 (List.rev $6) in add_cell $3 cell; add_port data $8 }
+  | Parenl Select id width bit id                Parenr  { let cell, data = create_select (current_scope ()) $4 $5 in add_cell $3 cell; add_port data $6 }
   | Parenl Eq     id width id id                 Parenr  { let cell, left, right = create_eq   (current_scope ()) $4 in add_cell $3 cell; add_port left $5; add_port right $6 }
   | Parenl Lt     id width id id                 Parenr  { let cell, left, right = create_lt   (current_scope ()) $4 in add_cell $3 cell; add_port left $5; add_port right $6 }
   | Parenl Add    id width id id                 Parenr  { let cell, left, right = create_add  (current_scope ()) $4 in add_cell $3 cell; add_port left $5; add_port right $6 }

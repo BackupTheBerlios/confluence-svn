@@ -71,7 +71,7 @@ let rec output_scope_item scope_item =
       | Xor    w         -> assign cell (input 0 ^ " xor " ^ input 1)
       | Or     w         -> assign cell (input 0 ^ " or " ^ input 1)
       | Concat (wl, wr)  -> assign cell (input 0 ^ " & " ^ input 1)
-      | Select (w, bits) -> assign cell (String2.join (List.map (fun bit -> input 0 ^ "(" ^ string_of_int bit ^ " downto " ^ string_of_int bit ^ ")") bits) " & ")
+      | Select (w, bit)  -> assign cell (input 0 ^ "(" ^ string_of_int bit ^ " downto " ^ string_of_int bit ^ ")")
       | Eq     w         -> assign cell ("\"1\" when " ^ input 0 ^ " = " ^ input 1 ^ " else \"0\"")
       | Lt     w         -> assign cell ("\"1\" when " ^ input 0 ^ " < " ^ input 1 ^ " else \"0\"")
       | Add    w         -> assign cell (input 0 ^ " + " ^ input 1)

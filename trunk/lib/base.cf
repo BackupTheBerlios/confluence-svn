@@ -1001,8 +1001,10 @@ end
 component (') +in +bits -out is
   if {is_integer in $}
     {const in bits out}
+  ef bits == []
+    {prim VectorZero x end out}
   else
-    {prim VectorSelect a b x end in bits out}
+    out = {prim VectorSelect a b x end in (head bits) $} '++' {(') in (tail bits) $}
   end
 end
 

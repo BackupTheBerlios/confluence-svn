@@ -9,6 +9,12 @@ Release Notes
 
 
 ------------------------------------------------------------------------
+Confluence 0.10.3 -- ???
+
+  - Changed FNF select primitive to select a single bit.
+
+
+------------------------------------------------------------------------
 Confluence 0.10.2 -- 02/01/2005
 
   - Added JHDL FNF code generator.  (Contributed by Nathan Cain)

@@ -262,6 +262,7 @@ type prim =
   | VectorXor
   | VectorNot
   | VectorConcat
+  | VectorZero
   | VectorSelect
   | VectorEqu
   | VectorLt
@@ -372,6 +373,7 @@ let totalArity prim =
   | VectorXor       -> 3
   | VectorNot       -> 2
   | VectorConcat    -> 3
+  | VectorZero      -> 1
   | VectorSelect    -> 3
   | VectorEqu       -> 3
   | VectorLt        -> 3
@@ -482,6 +484,7 @@ let toString prim =
   | VectorXor       -> "VectorXor"
   | VectorNot       -> "VectorNot"
   | VectorConcat    -> "VectorConcat"
+  | VectorZero      -> "VectorZero"
   | VectorSelect    -> "VectorSelect"
   | VectorEqu       -> "VectorEqu"
   | VectorLt        -> "VectorLt"
@@ -591,6 +594,7 @@ let fromString name =
   | "VectorXor" -> VectorXor
   | "VectorNot" -> VectorNot
   | "VectorConcat" -> VectorConcat
+  | "VectorZero"   -> VectorZero
   | "VectorSelect" -> VectorSelect
   | "VectorEqu" -> VectorEqu
   | "VectorLt" -> VectorLt
@@ -945,22 +949,16 @@ let vectorConcat sysId a b =
     CfTypes.newVector (Cf_fnf.new_concat sysId (CfTypes.getProducer a) (CfTypes.getProducer b))
 ;;
 
-let rec checkBits width bits =
-  match bits with
-    [] -> ()
-  | bit :: bits ->
-      if bit < 0      then raise (CfTypes.Error "Vector error.  Bit selection requires positive integers.");
-      if bit >= width then raise (CfTypes.Error "Vector error.  Bit selection requires integers < width - 1.");
-      checkBits width bits
+let vectorZero () =
+  CfTypes.zero_width_vector
 ;;
 
-let vectorSelect sysId input bits =
-  let bits = CfTypes.listToIntList bits in
-  checkBits (CfTypes.getWidth input) bits;
-  if List.length bits = 0 then
-    CfTypes.zero_width_vector
-  else
-    CfTypes.newVector (Cf_fnf.new_select sysId (CfTypes.getProducer input) bits)
+let vectorSelect sysId input bit =
+  let bit = CfTypes.getInt bit in
+  let width = CfTypes.getWidth input in
+  if bit < 0      then raise (CfTypes.Error "Vector error.  Bit selection requires positive integers.");
+  if bit >= width then raise (CfTypes.Error "Vector error.  Bit selection requires integers < width - 1.");
+  CfTypes.newVector (Cf_fnf.new_select sysId (CfTypes.getProducer input) bit)
 ;;
 
 let vectorEqu sysId a b =
@@ -1254,6 +1252,7 @@ let compilePrimitive primName arity =
         | VectorXor         -> stmt_of_prim_rllx   vectorXor
         | VectorNot         -> stmt_of_prim_rlx    vectorNot
         | VectorConcat      -> stmt_of_prim_rllx   vectorConcat
+        | VectorZero        -> stmt_of_prim_x      vectorZero
         | VectorSelect      -> stmt_of_prim_rlsx   vectorSelect
         | VectorEqu         -> stmt_of_prim_rllx   vectorEqu
         | VectorLt          -> stmt_of_prim_rllx   vectorLt
