@@ -3,14 +3,10 @@
 # Invoke Confluence.
 cf base_test.cf
 
-fnf -read_fnf out.fnf -write_fnf out.fnf
+fnf -read_fnf out.fnf -write_c out -write_fnf out.fnf
 
-# Execute C simulator.
-#echo "! " | ./lib_unit_test
-
-# Compile and execute C test bench.
-#gcc -Wall -o lib_unit_test_c lib_unit_test_bench.c lib_unit_test.c
-#./lib_unit_test_c
+# Compile C.
+gcc -Wall -c out.c
 
 # Compile and execute Verilog.
 #iverilog -Wall -o lib_unit_test_v lib_unit_test_bench.v lib_unit_test.v
@@ -23,7 +19,4 @@ fnf -read_fnf out.fnf -write_fnf out.fnf
 #xmllint -noout -valid lib_unit_test.xml
 
 # Clean up.
-#rm lib_unit_test*
-#rm work-obj93.cf
-rm out.fnf
-
+#rm out.*

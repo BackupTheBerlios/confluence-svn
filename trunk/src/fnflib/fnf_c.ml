@@ -1,6 +1,6 @@
 (*
     FNF: Free Netlist Format
-    Copyright (C) 2004 Tom Hawkins (tomahawkins@yahoo.com)
+    Copyright (C) 2004-2005 Tom Hawkins (tomahawkins@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -191,6 +191,102 @@ void delete_simulator(simulator_t simulator)
 ;;
 
 
+(** Creates the primitive functions. *)
+let output_primitive_functions () =
+  write_string "
+void fnf_not(int words, unsigned long mask, unsigned long* a, unsigned long* x)
+{
+  int i;
+  for (i = 0; i < words; i++)
+    x[i] = ~ a[i];
+  x[words - 1] = x[words - 1] & mask;
+}
+
+void fnf_and(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  for (i = 0; i < words; i++)
+    x[i] = a[i] & b[i];
+  x[words - 1] = x[words - 1] & mask;
+}
+
+void fnf_xor(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  for (i = 0; i < words; i++)
+    x[i] = a[i] ^ b[i];
+  x[words - 1] = x[words - 1] & mask;
+}
+
+void fnf_or(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  for (i = 0; i < words; i++)
+    x[i] = a[i] | b[i];
+  x[words - 1] = x[words - 1] & mask;
+}
+
+void fnf_eq(int words, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  x[0] = 1;
+  for (i = 0; i < words; i++)
+    x[0] = x[0] && a[i] == b[i];
+}
+
+void fnf_add(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  unsigned long long tmp = 0;
+  for (i = 0; i < words; i++) {
+    tmp = (unsigned long long) a[i] + (unsigned long long) b[i] + tmp;
+    x[i] = (unsigned long) (tmp & 0xFFFFFFFF);
+    tmp = (tmp >> 32) & 1;
+  }
+  x[words - 1] = x[words - 1] & mask;
+}
+
+void fnf_sub(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  unsigned long long tmp = 0;
+  for (i = 0; i < words; i++) {
+    tmp = (unsigned long long) a[i] - (unsigned long long) b[i] - tmp;
+    x[i] = (unsigned long) (tmp & 0xFFFFFFFF);
+    tmp = (tmp >> 32) & 1;
+  }
+  x[words - 1] = x[words - 1] & mask;
+}
+
+void fnf_mul(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i, ia, ib, ic;
+  unsigned long long tmp;
+  for (i = 0; i < words; i++) x[i] = 0;
+  for (i = 0; i < words; i++) {
+    for (ia = i, ib = 0; ia >= 0; ia--, ib++) {
+      tmp = (unsigned long long) (a[ia]) * (unsigned long long) (b[ib]);
+      for (ic = i; ic < words; ic++) {
+        tmp = tmp + (unsigned long long) x[ic];
+        x[ic] = (unsigned long) (tmp & 0xFFFFFFFF);
+        tmp = (tmp >> 8);
+      }
+    }
+  }
+  x[words - 1] = x[words - 1] & mask;
+}
+
+void fnf_mux(int words, unsigned long* select, unsigned long* on_0, unsigned long* on_1, unsigned long* x)
+{
+  int i;
+  for (i = 0; i < words; i++)
+    x[i] = select[0] ? on_1[i] : on_0[i];
+}
+
+"
+;;
+
+
 
 (** Misc Helpers *)
 
@@ -231,6 +327,10 @@ let mask_of_width width =
     "0xFFFFFFFF"
   else
     hex_of_bin (String.make remainder '1')
+;;
+
+let words_of_width width =
+  string_of_int (words_of_width width)
 ;;
 
 
@@ -294,6 +394,11 @@ let calc_cell cell =
     (match info_of_cell cell with Dangle -> raise (Invalid_argument "encountered unconnected cell") | _ -> ());
     index_of_cell cell
   in
+  let mem_index = "& memory[" ^ string_of_int index ^ "]" in
+  let mem_input num = "& memory[" ^ string_of_int (input num) ^ "]" in
+  let write_fnf_func name args =
+    write ("  " ^ name ^ "(" ^ String2.join args ", " ^ ");")
+  in
   match info_of_cell cell with
 
   | Input  _
@@ -304,16 +409,16 @@ let calc_cell cell =
   | Buf    _ -> ()
 
   | Not    w ->
-      write ("  // not");
+      write_fnf_func "fnf_not" [words_of_width w; mask_of_width w; mem_input 0; mem_index]
 
   | And    w ->
-      write ("  // and");
+      write_fnf_func "fnf_and" [words_of_width w; mask_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Xor    w ->
-      write ("  // xor");
+      write_fnf_func "fnf_xor" [words_of_width w; mask_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Or     w ->
-      write ("  // or");
+      write_fnf_func "fnf_or" [words_of_width w; mask_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Concat (wl, wr) ->
       write ("  // concat");
@@ -322,22 +427,22 @@ let calc_cell cell =
       write ("  // select");
 
   | Eq     w ->
-      write ("  // eq ");
+      write_fnf_func "fnf_eq" [words_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Lt     w ->
       write ("  // lt ");
 
   | Add    w ->
-      write ("  // add ");
+      write_fnf_func "fnf_add" [words_of_width w; mask_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Sub    w ->
-      write ("  // sub ");
+      write_fnf_func "fnf_sub" [words_of_width w; mask_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Mul    w ->
-      write ("  // mul ");
+      write_fnf_func "fnf_mul" [words_of_width w; mask_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Mux    w ->
-      write ("  // mux");
+      write_fnf_func "fnf_mux" [words_of_width w; mem_input 0; mem_input 1; mem_input 2; mem_index]
 
   | Ff     w ->
       write ("  // ff");
@@ -354,8 +459,8 @@ let output_calc cells =
   write_h "";
   write "void calc_simulator(simulator_t simulator)";
   write "{";
-  write "unsigned long *memory;";
-  write "memory = simulator->memory;";
+  write "  unsigned long *memory;";
+  write "  memory = simulator->memory;";
   List.iter calc_cell cells;
   (* XXX Update register states. *)
   write "}";
@@ -408,6 +513,7 @@ let output_c out_channel_c out_channel_h scope =
   write "#include <stdlib.h>";
   output_sim_struct scope cells;
   output_new_delete ();
+  output_primitive_functions ();
   output_init scope cells;
   output_calc cells;
   write_h "#ifdef __cplusplus\n}\n#endif\n";
