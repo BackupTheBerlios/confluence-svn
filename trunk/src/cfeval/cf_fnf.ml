@@ -67,7 +67,10 @@ let rec scope_of_system system =
   | System (parent, _, scope, _, _, _, _, _) ->
     (match !scope with
     | No_scope (module_name, instance_name) ->
+        (*
         let new_scope = create_sub_scope (scope_of_system parent) module_name instance_name in
+        *)
+        let new_scope = fnf in
         scope := Scope new_scope;
         new_scope
     | Scope scope -> scope)
