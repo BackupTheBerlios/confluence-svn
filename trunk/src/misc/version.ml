@@ -1,6 +1,6 @@
 (*
     Confluence System Design Language Compiler
-    Copyright (C) 2003-2004 Tom Hawkins (tomahawkins@yahoo.com)
+    Copyright (C) 2003-2005 Tom Hawkins (tomahawkins@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

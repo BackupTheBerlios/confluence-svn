@@ -194,12 +194,17 @@ void delete_simulator(simulator_t simulator)
 (** Creates the primitive functions. *)
 let output_primitive_functions () =
   write_string "
+void fnf_mask(int words, unsigned long mask, unsigned long* x)
+{
+  x[words - 1] = x[words - 1] & mask;
+}
+
 void fnf_not(int words, unsigned long mask, unsigned long* a, unsigned long* x)
 {
   int i;
   for (i = 0; i < words; i++)
     x[i] = ~ a[i];
-  x[words - 1] = x[words - 1] & mask;
+  fnf_mask(words, mask, x);
 }
 
 void fnf_and(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
@@ -207,7 +212,7 @@ void fnf_and(int words, unsigned long mask, unsigned long* a, unsigned long* b, 
   int i;
   for (i = 0; i < words; i++)
     x[i] = a[i] & b[i];
-  x[words - 1] = x[words - 1] & mask;
+  fnf_mask(words, mask, x);
 }
 
 void fnf_xor(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
@@ -215,7 +220,7 @@ void fnf_xor(int words, unsigned long mask, unsigned long* a, unsigned long* b, 
   int i;
   for (i = 0; i < words; i++)
     x[i] = a[i] ^ b[i];
-  x[words - 1] = x[words - 1] & mask;
+  fnf_mask(words, mask, x);
 }
 
 void fnf_or(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
@@ -223,7 +228,47 @@ void fnf_or(int words, unsigned long mask, unsigned long* a, unsigned long* b, u
   int i;
   for (i = 0; i < words; i++)
     x[i] = a[i] | b[i];
-  x[words - 1] = x[words - 1] & mask;
+  fnf_mask(words, mask, x);
+}
+
+void fnf_concat_over(int words_a, int words_b, int shift_left, int shift_right, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  int j;
+  for (i = 0; i < words_b; i++)
+    x[i] = b[i];
+  for (i = 0, j = words_b - 1; i < words_a; i++, j++) {
+    x[j] = x[j] | (0xFFFFFFFF & (a[i] << shift_left));
+    x[j + 1] = a[i] >> shift_right;
+  }
+}
+
+void fnf_concat_under(int words_a, int words_b, int shift_left, int shift_right, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  int j;
+  for (i = 0; i < words_b; i++)
+    x[i] = b[i];
+  for (i = 0, j = words_b - 1; i < words_a - 1; i++, j++) {
+    x[j] = x[j] | (0xFFFFFFFF & (a[i] << shift_left));
+    x[j + 1] = a[i] >> shift_right;
+  }
+  x[j] = x[j] | (0xFFFFFFFF & (a[i] << shift_left));
+}
+
+void fnf_concat_simple(int words_a, int words_b, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  int j;
+  for (i = 0; i < words_b; i++)
+    x[i] = b[i];
+  for (i = 0, j = words_b; i < words_a; i++, j++)
+    x[j] = a[i];
+}
+
+void fnf_select(int word, int bit, unsigned long* a, unsigned long* x)
+{
+  x[0] = 1 & (a[word] >> bit);
 }
 
 void fnf_eq(int words, unsigned long* a, unsigned long* b, unsigned long* x)
@@ -232,6 +277,21 @@ void fnf_eq(int words, unsigned long* a, unsigned long* b, unsigned long* x)
   x[0] = 1;
   for (i = 0; i < words; i++)
     x[0] = x[0] && a[i] == b[i];
+}
+
+void fnf_lt(int words, unsigned long* a, unsigned long* b, unsigned long* x)
+{
+  int i;
+  x[0] = 0;
+  for (i = words - 1; i >= 0; i--) {
+    if (a[i] < b[i]) {
+      x[0] = 1;
+      return;
+    }
+    else if (a[i] > b[i]) {
+      return;
+    }
+  }
 }
 
 void fnf_add(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
@@ -243,7 +303,7 @@ void fnf_add(int words, unsigned long mask, unsigned long* a, unsigned long* b, 
     x[i] = (unsigned long) (tmp & 0xFFFFFFFF);
     tmp = (tmp >> 32) & 1;
   }
-  x[words - 1] = x[words - 1] & mask;
+  fnf_mask(words, mask, x);
 }
 
 void fnf_sub(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
@@ -255,7 +315,7 @@ void fnf_sub(int words, unsigned long mask, unsigned long* a, unsigned long* b, 
     x[i] = (unsigned long) (tmp & 0xFFFFFFFF);
     tmp = (tmp >> 32) & 1;
   }
-  x[words - 1] = x[words - 1] & mask;
+  fnf_mask(words, mask, x);
 }
 
 void fnf_mul(int words, unsigned long mask, unsigned long* a, unsigned long* b, unsigned long* x)
@@ -273,7 +333,7 @@ void fnf_mul(int words, unsigned long mask, unsigned long* a, unsigned long* b, 
       }
     }
   }
-  x[words - 1] = x[words - 1] & mask;
+  fnf_mask(words, mask, x);
 }
 
 void fnf_mux(int words, unsigned long* select, unsigned long* on_0, unsigned long* on_1, unsigned long* x)
@@ -281,6 +341,49 @@ void fnf_mux(int words, unsigned long* select, unsigned long* on_0, unsigned lon
   int i;
   for (i = 0; i < words; i++)
     x[i] = select[0] ? on_1[i] : on_0[i];
+}
+
+void fnf_ff(int words, unsigned long* clk, unsigned long* q)
+{
+  int i;
+  unsigned long* state_clk = & q[words];
+  unsigned long* state_d   = & q[words + 1];
+  if (clk[0] && ! state_clk[0]) 
+    for (i = 0; i < words; i++)
+      q[i] = state_d[i];
+  state_clk[0] = clk[0];
+}
+
+void fnf_ff_update(int words, unsigned long* data, unsigned long* q)
+{
+  int i;
+  unsigned long* state_d   = & q[words + 1];
+  for (i = 0; i < words; i++)
+    state_d[i] = data[i];
+}
+
+void fnf_ffc(int words, unsigned long* clr, unsigned long* clk, unsigned long* q)
+{
+  int i;
+  unsigned long* state_clr = & q[words];
+  unsigned long* state_clk = & q[words + 1];
+  unsigned long* state_d   = & q[words + 2];
+  if (clr[0] && ! state_clr[0])
+    for (i = 0; i < words; i++)
+      q[i] = 0;
+  else if (clk[0] && ! state_clk[0]) 
+    for (i = 0; i < words; i++)
+      q[i] = state_d[i];
+  state_clr[0] = clr[0];
+  state_clk[0] = clk[0];
+}
+
+void fnf_ffc_update(int words, unsigned long* data, unsigned long* q)
+{
+  int i;
+  unsigned long* state_d = & q[words + 2];
+  for (i = 0; i < words; i++)
+    state_d[i] = data[i];
 }
 
 "
@@ -329,10 +432,6 @@ let mask_of_width width =
     hex_of_bin (String.make remainder '1')
 ;;
 
-let words_of_width width =
-  string_of_int (words_of_width width)
-;;
-
 
 (** Cell Initialization *)
 
@@ -362,9 +461,20 @@ let init_cell cell =
       in
       f value (index_of_cell cell)
 
+  | Ff w  ->
+      write ("  memory[" ^ string_of_int (index_of_cell cell + words_of_width w) ^ "] = 1;")
+
+  | Ffc w  ->
+      write ("  memory[" ^ string_of_int (index_of_cell cell + words_of_width w    ) ^ "] = 1;");
+      write ("  memory[" ^ string_of_int (index_of_cell cell + words_of_width w + 1) ^ "] = 1;");
+
   | _ -> ()
 ;;
 
+
+let words_of_width width =
+  string_of_int (words_of_width width)
+;;
 
 
 (** Define the init function. *)
@@ -401,7 +511,9 @@ let calc_cell cell =
   in
   match info_of_cell cell with
 
-  | Input  _
+  | Input  (_, w) ->
+      write_fnf_func "fnf_mask" [words_of_width w; mask_of_width w; mem_index]
+
   | Output _
   | Name   _
   | Dangle
@@ -421,16 +533,23 @@ let calc_cell cell =
       write_fnf_func "fnf_or" [words_of_width w; mask_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Concat (wl, wr) ->
-      write ("  // concat");
+      let shift_left  = wr mod 32 in
+      let shift_right = 32 - shift_left in
+      if shift_left = 0 then
+        write_fnf_func "fnf_concat_simple" [words_of_width wl; words_of_width wr; mem_input 0; mem_input 1; mem_index]
+      else if shift_right > wl mod 32 then
+        write_fnf_func "fnf_concat_under" [words_of_width wl; words_of_width wr; string_of_int shift_left; string_of_int shift_right; mem_input 0; mem_input 1; mem_index]
+      else
+        write_fnf_func "fnf_concat_over" [words_of_width wl; words_of_width wr; string_of_int shift_left; string_of_int shift_right; mem_input 0; mem_input 1; mem_index]
 
   | Select (w, bit) ->
-      write ("  // select");
+      write_fnf_func "fnf_select" [string_of_int (bit / 32); string_of_int (bit mod 32); mem_input 0; mem_index]
 
   | Eq     w ->
       write_fnf_func "fnf_eq" [words_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Lt     w ->
-      write ("  // lt ");
+      write_fnf_func "fnf_lt" [words_of_width w; mem_input 0; mem_input 1; mem_index]
 
   | Add    w ->
       write_fnf_func "fnf_add" [words_of_width w; mask_of_width w; mem_input 0; mem_input 1; mem_index]
@@ -445,10 +564,31 @@ let calc_cell cell =
       write_fnf_func "fnf_mux" [words_of_width w; mem_input 0; mem_input 1; mem_input 2; mem_index]
 
   | Ff     w ->
-      write ("  // ff");
+      write_fnf_func "fnf_ff" [words_of_width w; mem_input 0; mem_index]
 
   | Ffc    w ->
-      write ("  // ffc");
+      write_fnf_func "fnf_ffc" [words_of_width w; mem_input 0; mem_input 1; mem_index]
+;;
+
+let reg_update_cell cell =
+  let input num =
+    let cell = producer_of_port (port_of_cell cell num) in
+    (match info_of_cell cell with Dangle -> raise (Invalid_argument "encountered unconnected cell") | _ -> ());
+    index_of_cell cell
+  in
+  let mem_index = "& memory[" ^ string_of_int (index_of_cell cell) ^ "]" in
+  let mem_input num = "& memory[" ^ string_of_int (input num) ^ "]" in
+  let write_fnf_func name args =
+    write ("  " ^ name ^ "(" ^ String2.join args ", " ^ ");")
+  in
+  match info_of_cell cell with
+  | Ff     w ->
+      write_fnf_func "fnf_ff_update" [words_of_width w; mem_input 1; mem_index]
+
+  | Ffc    w ->
+      write_fnf_func "fnf_ffc_update" [words_of_width w; mem_input 2; mem_index]
+
+  | _ -> ()
 ;;
 
 
@@ -462,7 +602,7 @@ let output_calc cells =
   write "  unsigned long *memory;";
   write "  memory = simulator->memory;";
   List.iter calc_cell cells;
-  (* XXX Update register states. *)
+  List.iter reg_update_cell cells;
   write "}";
   write "";
 ;;

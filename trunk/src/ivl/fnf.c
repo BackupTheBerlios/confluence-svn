@@ -134,7 +134,7 @@ unsigned id_of_nexus(ivl_nexus_t nexus)
 void create_bit_select(unsigned output_id, unsigned width, unsigned bit, unsigned input_id)
 {
   indent();
-  fprintf(output, "  (select %i %i (%i) %i)\n", output_id, width, bit, input_id);
+  fprintf(output, "  (select %i %i %i %i)\n", output_id, width, bit, input_id);
 }
 
 // Create bit concat.

@@ -92,10 +92,6 @@ let help () =
       Verilog and VHDL Model Writer
         - Netlist is flat.
 
-      C Model Writer
-        - 2-value model.  No X's or Z's.
-        - Registers are initialized to 0.
-
       NuSMV Model Writer
         - No multiplier support.
         - 2-value model.  No X's or Z's.

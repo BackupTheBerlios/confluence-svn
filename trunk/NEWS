@@ -9,9 +9,15 @@ Release Notes
 
 
 ------------------------------------------------------------------------
-Confluence 0.10.3 -- ???
+Confluence 0.10.3 -- 02/17/2005
 
-  - Changed FNF select primitive to select a single bit.
+  - Changed FNF select primitive to select a single bit, rather
+    than a sequence of bits.  Updated all the FNF generators and
+    the Icarus FNF writer.
+
+  - Completed the initial FNF C model generator:
+
+    $ fnf -read_fnf model.fnf -write_c model
 
 
 ------------------------------------------------------------------------

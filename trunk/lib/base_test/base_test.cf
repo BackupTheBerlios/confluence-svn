@@ -572,6 +572,10 @@ component vectors +N is
   {ut.assert_logic N "('lsbs')_3" (('lsbs' '011') '==' '11')}
   {ut.assert_logic N "('lsbs')_4" (('lsbs' '110') '==' '10')}
 
+  {ut.assert_equal N "('++')_0" (width ('00010111' '++' '010')) 11}
+  {ut.assert_logic N "('++')_1" ('00010111' '++' '010' '==' '00010111010')}
+  {ut.assert_logic N "('++')_2" ('0xFF' '++' '0x00000000' '==' '0xFF00000000')}
+
   {ut.assert_equal N "(')_1" (width '0000''[3 : 0]) 4}
   {ut.assert_equal N "(')_2" (width '0000''[1 : 2]) 2}
   {ut.assert_logic N "(')_3" (('00010111''[] '++' '010') '==' '010')}
