@@ -88,6 +88,7 @@ let help () =
           WARNING: No errors will be issued if a design contains \"negedge\".
         - All arithmetic operations must be unsigned.
           WARNING: No errors will be issued if a design contains signed operations.
+        - Multipliers can not be embbeded in concatenations.
 
       Verilog and VHDL Model Writer
         - Netlist is flat.

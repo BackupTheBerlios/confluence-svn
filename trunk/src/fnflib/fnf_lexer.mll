@@ -25,6 +25,10 @@
 
 let white_space     = [' ' '\t' '\r' '\n']
 
+(* Comments *)
+
+let comment = ';' [^ '\n']* '\n'
+
 (* Integers *)
 
 let dec_digit      = ['0' - '9']
@@ -65,6 +69,8 @@ rule token = parse
   | string               { Fnf_parser.String              (Parser_util.next_lex lexbuf) }
 
   | eof                  { Fnf_parser.EOF                 (Parser_util.next_lex lexbuf) }
+
+  | comment              { let _ = Parser_util.next_lex lexbuf in token lexbuf }
 
   | white_space          { let _ = Parser_util.next_lex lexbuf in token lexbuf }
 

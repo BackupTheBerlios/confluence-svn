@@ -61,6 +61,7 @@ void quoted_string(const char * string)
 struct nexus_table_s {
   ivl_nexus_t nexus;
   unsigned id;
+  unsigned is_driven;
   struct nexus_table_s* lt;
   struct nexus_table_s* gt;
 } * nexus_table = 0;
@@ -73,12 +74,16 @@ unsigned new_id()
   return next_id++;
 }
 
-// Delete the nexus table.
+// Delete the nexus table.  Check for dangling nets.
 void delete_nexus_table(nexus_table_t table)
 { 
   if (table) {
     nexus_table_t lt = table->lt;
     nexus_table_t gt = table->gt;
+    if (! (table->is_driven)) {
+      indent();
+      fprintf(output, "  (dangle %i)\n", table->id);
+    }
     free((void*) table);
     delete_nexus_table(lt);
     delete_nexus_table(gt);
@@ -86,28 +91,32 @@ void delete_nexus_table(nexus_table_t table)
 }
 
 // Table construction.
-unsigned id_of_nexus_0(ivl_nexus_t nexus, nexus_table_t table)
+unsigned id_of_nexus_0(ivl_nexus_t nexus, nexus_table_t table, unsigned is_driven)
 {
-  if (nexus == table->nexus)
+  if (nexus == table->nexus) {
+    table->is_driven = table->is_driven || is_driven;
     return table->id;
+  }
   else if (nexus < table->nexus)
     if (table->lt)
-      return id_of_nexus_0(nexus, table->lt);
+      return id_of_nexus_0(nexus, table->lt, is_driven);
     else {
       table->lt = (nexus_table_t) (malloc(sizeof(*table)));
       table->lt->nexus = nexus;
       table->lt->id = new_id();
+      table->lt->is_driven = is_driven;
       table->lt->lt = 0;
       table->lt->gt = 0;
       return table->lt->id;
     }
   else // nexus > table->nexus
     if (table->gt)
-      return id_of_nexus_0(nexus, table->gt);
+      return id_of_nexus_0(nexus, table->gt, is_driven);
     else {
       table->gt = (nexus_table_t) (malloc(sizeof(*table)));
       table->gt->nexus = nexus;
       table->gt->id = new_id();
+      table->gt->is_driven = is_driven;
       table->gt->lt = 0;
       table->gt->gt = 0;
       return table->gt->id;
@@ -115,18 +124,19 @@ unsigned id_of_nexus_0(ivl_nexus_t nexus, nexus_table_t table)
 }
 
 // Lookup nexus id.
-unsigned id_of_nexus(ivl_nexus_t nexus)
+unsigned id_of_nexus(ivl_nexus_t nexus, unsigned is_driven)
 {
   if (! nexus_table) {
     nexus_table = (nexus_table_t) (malloc(sizeof(*nexus_table)));
     nexus_table->nexus = nexus;
     nexus_table->id = new_id();
+    nexus_table->is_driven = is_driven;
     nexus_table->lt = 0;
     nexus_table->gt = 0;
     return nexus_table->id;
   }
   else
-    return id_of_nexus_0(nexus, nexus_table);
+    return id_of_nexus_0(nexus, nexus_table, is_driven);
 }
 
 
@@ -142,7 +152,7 @@ unsigned create_bit_concat(unsigned input_id, unsigned input_width, ivl_nexus_t 
 {
   unsigned id = new_id();
   indent();
-  fprintf(output, "  (concat %i 1 %i %i %i)\n", id, input_width, id_of_nexus(nexus), input_id);
+  fprintf(output, "  (concat %i 1 %i %i %i)\n", id, input_width, id_of_nexus(nexus, 0), input_id);
   return id;
 }
 
@@ -152,9 +162,10 @@ unsigned create_concat_lpm_data(ivl_lpm_t lpm)
   unsigned width = ivl_lpm_width(lpm);
   unsigned id;
   unsigned i;
-  id = id_of_nexus(ivl_lpm_data(lpm, 0));
-  for (i = 1; i < width; i++)
+  id = id_of_nexus(ivl_lpm_data(lpm, 0), 0);
+  for (i = 1; i < width; i++) {
     id = create_bit_concat(id, i, ivl_lpm_data(lpm, i));
+  }
   return id;
 }
   
@@ -164,9 +175,10 @@ unsigned create_concat_lpm_datab(ivl_lpm_t lpm)
   unsigned width = ivl_lpm_width(lpm);
   unsigned id;
   unsigned i;
-  id = id_of_nexus(ivl_lpm_datab(lpm, 0));
-  for (i = 1; i < width; i++)
+  id = id_of_nexus(ivl_lpm_datab(lpm, 0), 0);
+  for (i = 1; i < width; i++) {
     id = create_bit_concat(id, i, ivl_lpm_datab(lpm, i));
+  }
   return id;
 }
 
@@ -176,9 +188,10 @@ unsigned create_concat_lpm_data2(ivl_lpm_t lpm, unsigned select)
   unsigned width = ivl_lpm_width(lpm);
   unsigned id;
   unsigned i;
-  id = id_of_nexus(ivl_lpm_data2(lpm, select, 0));
-  for (i = 1; i < width; i++)
+  id = id_of_nexus(ivl_lpm_data2(lpm, select, 0), 0);
+  for (i = 1; i < width; i++) {
     id = create_bit_concat(id, i, ivl_lpm_data2(lpm, select, i));
+  }
   return id;
 }
 
@@ -188,14 +201,14 @@ void create_split_lpm_q(ivl_lpm_t lpm, unsigned id)
   unsigned width = ivl_lpm_width(lpm);
   unsigned i;
   for (i = 0; i < width; i++)
-    create_bit_select(id_of_nexus(ivl_lpm_q(lpm, i)), width, i, id);
+    create_bit_select(id_of_nexus(ivl_lpm_q(lpm, i), 1), width, i, id);
 }
   
 // Repeated gates.
 void create_multi_gate(const char* gate, unsigned id, ivl_net_logic_t logic)
 {
   unsigned width = ivl_logic_pins(logic);
-  unsigned id1 = id_of_nexus(ivl_logic_pin(logic, 1));
+  unsigned id1 = id_of_nexus(ivl_logic_pin(logic, 1), 0);
   if (width == 2) {
     indent();
     fprintf(output, "  (buf    %i 1 %i)\n", id, id1);
@@ -206,7 +219,7 @@ void create_multi_gate(const char* gate, unsigned id, ivl_net_logic_t logic)
     for (i = 2; i < width; i++) {
       id2 = (i == width - 1) ? id : new_id();
       indent();
-      fprintf(output, "  (%s   %i 1 %i %i)\n", gate, id2, id1, id_of_nexus(ivl_logic_pin(logic, i)));
+      fprintf(output, "  (%s   %i 1 %i %i)\n", gate, id2, id1, id_of_nexus(ivl_logic_pin(logic, i), 0));
       id1 = id2;
     }
   }
@@ -215,19 +228,20 @@ void create_multi_gate(const char* gate, unsigned id, ivl_net_logic_t logic)
 // Mux tree.
 unsigned create_mux(ivl_lpm_t lpm, unsigned select_width, unsigned select_number)
 {
+  unsigned id;
   if (select_width == 0) {
-    return create_concat_lpm_data2(lpm, select_number);
+    id = create_concat_lpm_data2(lpm, select_number);
   }
   else {
-    unsigned id = new_id();
     unsigned width = ivl_lpm_width(lpm);
-    unsigned select = id_of_nexus(ivl_lpm_select(lpm, select_width - 1));
+    unsigned select = id_of_nexus(ivl_lpm_select(lpm, select_width - 1), 0);
     unsigned data_0 = create_mux(lpm, select_width - 1, select_number << 1);
     unsigned data_1 = create_mux(lpm, select_width - 1, (select_number << 1) | 1);
+    id = new_id();
     indent();
     fprintf(output, "  (mux    %i %i %i %i %i)\n", id, width, select, data_0, data_1);
-    return id;
   }
+  return id;
 }
 
 
@@ -262,7 +276,7 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
         fprintf(output, "%c", bits[j]);
       fprintf(output, "\")\n");
       for (j = 0; j < pins; j++)
-        create_bit_select(id_of_nexus(ivl_const_pin(constant, j)), pins, j, id);
+        create_bit_select(id_of_nexus(ivl_const_pin(constant, j), 1), pins, j, id);
     }
 
   // Parameters
@@ -299,21 +313,23 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
       id = new_id();
       fprintf(output, "  (input  %i \"%s\" %i)\n", id, name, pins);
       for (j = 0; j < pins; j++)
-        create_bit_select(id_of_nexus(ivl_signal_pin(sig, j)), pins, j, id);
+        create_bit_select(id_of_nexus(ivl_signal_pin(sig, j), 1), pins, j, id);
     }
     else if (! level && type == IVL_SIP_INOUT) {
       printf("** ERROR: Inout ports not supported.\n");
     }
     else if (! level && type == IVL_SIP_OUTPUT) {
-      id = id_of_nexus(ivl_signal_pin(sig, 0));
-      for (j = 1; j < pins; j++)
+      id = id_of_nexus(ivl_signal_pin(sig, 0), 0);
+      for (j = 1; j < pins; j++) {
         id = create_bit_concat(id, j, ivl_signal_pin(sig, j));
+      }
       fprintf(output, "  (output %i \"%s\" %i %i)\n", new_id(), name, pins, id);
     }
     else {
-      id = id_of_nexus(ivl_signal_pin(sig, 0));
-      for (j = 1; j < pins; j++)
+      id = id_of_nexus(ivl_signal_pin(sig, 0), 0);
+      for (j = 1; j < pins; j++) {
         id = create_bit_concat(id, j, ivl_signal_pin(sig, j));
+      }
       indent();
       fprintf(output, "  (name   %i ", new_id());  //XXX Why is "_s22" getting named?
       quoted_string(name);
@@ -328,17 +344,17 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
     switch (ivl_logic_type(log)) {
       case IVL_LO_BUF:
         indent();
-        fprintf(output, "  (buf    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0)), id_of_nexus(ivl_logic_pin(log, 1)));
+        fprintf(output, "  (buf    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0), 1), id_of_nexus(ivl_logic_pin(log, 1), 0));
         break;
 
       case IVL_LO_NOT:
         indent();
-        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0)), id_of_nexus(ivl_logic_pin(log, 1)));
+        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0), 1), id_of_nexus(ivl_logic_pin(log, 1), 0));
         break;
 
       case IVL_LO_AND:
         indent();
-        create_multi_gate("and ", id_of_nexus(ivl_logic_pin(log, 0)), log);
+        create_multi_gate("and ", id_of_nexus(ivl_logic_pin(log, 0), 1), log);
         break;
       
       case IVL_LO_NAND:
@@ -346,12 +362,12 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
         indent();
         create_multi_gate("and ", id, log);
         indent();
-        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0)), id);
+        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0), 1), id);
         break;
       
       case IVL_LO_XOR:
         indent();
-        create_multi_gate("xor ", id_of_nexus(ivl_logic_pin(log, 0)), log);
+        create_multi_gate("xor ", id_of_nexus(ivl_logic_pin(log, 0), 1), log);
         break;
       
       case IVL_LO_XNOR:
@@ -359,12 +375,12 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
         indent();
         create_multi_gate("xor ", id, log);
         indent();
-        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0)), id);
+        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0), 1), id);
         break;
       
       case IVL_LO_OR:
         indent();
-        create_multi_gate("or  ", id_of_nexus(ivl_logic_pin(log, 0)), log);
+        create_multi_gate("or  ", id_of_nexus(ivl_logic_pin(log, 0), 1), log);
         break;
       
       case IVL_LO_NOR:
@@ -372,7 +388,7 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
         indent();
         create_multi_gate("or  ", id, log);
         indent();
-        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0)), id);
+        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_logic_pin(log, 0), 1), id);
         break;
 
       default:
@@ -421,7 +437,7 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
         id1 = create_concat_lpm_data(lpm);
         id2 = create_concat_lpm_datab(lpm);
         indent();
-        fprintf(output, "  (eq     %i %i %i %i)\n", id_of_nexus(ivl_lpm_q(lpm, 0)), width, id1, id2);
+        fprintf(output, "  (eq     %i %i %i %i)\n", id_of_nexus(ivl_lpm_q(lpm, 0), 1), width, id1, id2);
         break;
 
       case IVL_LPM_CMP_NE:
@@ -431,7 +447,7 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
         indent();
         fprintf(output, "  (eq     %i %i %i %i)\n", id, width, id1, id2);
         indent();
-        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_lpm_q(lpm, 0)), id);
+        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_lpm_q(lpm, 0), 1), id);
         break;
 
       case IVL_LPM_CMP_GT:
@@ -439,7 +455,7 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
         id1 = create_concat_lpm_data(lpm);
         id2 = create_concat_lpm_datab(lpm);
         indent();
-        fprintf(output, "  (lt     %i %i %i %i)\n", id_of_nexus(ivl_lpm_q(lpm, 0)), width, id2, id1);
+        fprintf(output, "  (lt     %i %i %i %i)\n", id_of_nexus(ivl_lpm_q(lpm, 0), 1), width, id2, id1);
         break;
 
       case IVL_LPM_CMP_GE:
@@ -450,7 +466,7 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
         indent();
         fprintf(output, "  (lt     %i %i %i %i)\n", id, width, id1, id2);
         indent();
-        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_lpm_q(lpm, 0)), id);
+        fprintf(output, "  (not    %i 1 %i)\n", id_of_nexus(ivl_lpm_q(lpm, 0), 1), id);
         break;
 
       case IVL_LPM_FF:
@@ -467,7 +483,7 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
           if (enable) {
             id2 = new_id();
             indent();
-            fprintf(output, "  (mux    %i %i %i %i %i)\n", id2, width, id_of_nexus(enable), id, id1);
+            fprintf(output, "  (mux    %i %i %i %i %i)\n", id2, width, id_of_nexus(enable, 0), id, id1);
             id1 = id2;
           }
           if (sync_clr) {
@@ -479,17 +495,17 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
               fprintf(output, "0");
             fprintf(output, "\")\n");
             indent();
-            fprintf(output, "  (mux    %i %i %i %i %i)\n", id2, width, id_of_nexus(sync_clr), id1, id3);
+            fprintf(output, "  (mux    %i %i %i %i %i)\n", id2, width, id_of_nexus(sync_clr, 0), id1, id3);
             id1 = id2;
           }
           // XXX Default to posedge sensitivity.
           if (async_clr) {
             indent();
-            fprintf(output, "  (ffc    %i %i %i %i %i)\n", id, width, id_of_nexus(async_clr), id_of_nexus(clk), id1);
+            fprintf(output, "  (ffc    %i %i %i %i %i)\n", id, width, id_of_nexus(async_clr, 0), id_of_nexus(clk, 0), id1);
           }
           else {
             indent();
-            fprintf(output, "  (ff     %i %i %i %i)\n", id, width, id_of_nexus(clk), id1);
+            fprintf(output, "  (ff     %i %i %i %i)\n", id, width, id_of_nexus(clk, 0), id1);
           }
           create_split_lpm_q(lpm, id);
         }
@@ -516,6 +532,8 @@ int build_hierarchy(ivl_scope_t scope, void* cd)
   level = level + 1;
   return_code = ivl_scope_children(scope, build_hierarchy, 0);
   level = level - 1;
+  if (! level)
+    delete_nexus_table(nexus_table);
   indent();
   fprintf(output, "))\n");
   return return_code;
@@ -538,8 +556,6 @@ int target_design(ivl_design_t des)
 
   level = 0;
   build_hierarchy(ivl_design_root(design), 0);
-  delete_nexus_table(nexus_table);
-
   design = 0;
   fclose(output);
   output = 0;

@@ -9,6 +9,12 @@ Release Notes
 
 
 ------------------------------------------------------------------------
+Confluence 0.10.4 -- ???
+
+  - The FNF NuSMV code generator turns output vectors into assertions.
+
+
+------------------------------------------------------------------------
 Confluence 0.10.3 -- 02/17/2005
 
   - Changed FNF select primitive to select a single bit, rather
