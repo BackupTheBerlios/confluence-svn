@@ -9,9 +9,11 @@ Release Notes
 
 
 ------------------------------------------------------------------------
-Confluence 0.10.4 -- ???
+Confluence 0.10.4 -- 03/23/2005
 
   - The FNF NuSMV code generator turns output vectors into assertions.
+
+  - FNF NuSMV code generator adds support for multipliers.
 
 
 ------------------------------------------------------------------------

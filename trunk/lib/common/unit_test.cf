@@ -43,6 +43,7 @@ end
 component assert_logic +test_name +assert_name +a is
   (* XXX
   {assert ("** assert_logic violation: " ++ test_name ++ "/" ++ assert_name) a}
+  {output (test_name ++ "/" ++ assert_name) a}
   *)
 end
 

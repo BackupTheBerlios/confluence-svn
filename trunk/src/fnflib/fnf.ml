@@ -94,7 +94,6 @@ let help () =
         - Netlist is flat.
 
       NuSMV Model Writer
-        - No multiplier support.
         - 2-value model.  No X's or Z's.
         - Inputs assumed to init to 0.
         - Registers are initialized to 0.

@@ -1,6 +1,6 @@
 (*
     FNF: Free Netlist Format
-    Copyright (C) 2004 Tom Hawkins (tomahawkins@yahoo.com)
+    Copyright (C) 2005 Tom Hawkins (tomahawkins@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -61,6 +61,28 @@ let if_expr pred on_true on_false =
 ;;
 
 
+(** Adder used for add and mul.*)
+let add label_x label_a label_b msb lsb =
+  let rec add is_msb bit =
+    if bit < lsb then raise (Invalid_argument "add");
+    let xout = label_x bit in
+    let cout = label_x bit ^ "_c" in
+    let temp = label_x bit ^ "_t" in
+    let cin  = if bit = lsb then "0" else add false (bit - 1) in
+    if is_msb then
+      write ("DEFINE " ^ xout ^ "   := " ^ label_a bit ^ " xor " ^ label_b bit ^ " xor " ^ cin ^ ";")
+    else begin
+      write ("DEFINE " ^ temp ^   " := " ^ label_a bit ^ " xor " ^ label_b bit ^ ";");
+      write ("DEFINE " ^ cout ^   " := (" ^ temp ^ " & " ^ cin ^ ") | (" ^ label_a bit ^ " & " ^ label_b bit ^ ");");
+      write ("DEFINE " ^ xout ^ "   := " ^ temp ^ " xor " ^ cin ^ ";")
+    end;
+    cout
+  in
+  let _ = add true msb in
+  ()
+;;
+
+
 
 (** NuSMV Data Representation
 
@@ -68,21 +90,6 @@ For 2-value model:
 
   <cell>_<bit>
   
-For 4-value model:
-
-  <cell>_x_<bit>
-  <cell>_y_<bit>
-
-  x y : val
-  ---------
-  0 0 : Z
-  0 1 : X
-  1 0 : 0
-  1 1 : 1
-
-  x = is_known
-  y = if is_known then is_high else is_driven
-
 *)
 
 let rec output_scope_item scope_item =
@@ -184,20 +191,10 @@ let rec output_scope_item scope_item =
           write ("DEFINE " ^ id ^ "_0 := " ^ lt (w - 1) ^ ";")
 
       | Add    w ->
-          let rec add bit =
-            let xout = id ^ "_" ^ string_of_int bit in
-            let cout = id ^ "_" ^ string_of_int bit ^ "_c" in
-            let temp = id ^ "_" ^ string_of_int bit ^ "_t" in
-            let cin  = if bit = 0 then "0" else add (bit - 1) in
-            let bit = "_" ^ string_of_int bit in
-            write ("DEFINE " ^ temp ^   " := " ^ input 0 ^ bit ^ " xor " ^ input 1 ^ bit ^ ";");
-            write ("DEFINE " ^ cout ^   " := (" ^ temp ^ " & " ^ cin ^ ") | (" ^ input 0 ^ bit ^ " & " ^ input 1 ^ bit ^ ");");
-            write ("DEFINE " ^ xout ^ "   := " ^ temp ^ " xor " ^ cin ^ ";");
-            cout
-          in
           write ("-- add " ^ id ^ " = " ^ input 0 ^ " + " ^ input 1);
-          let _ = add (w - 1) in
-          ()
+          add (fun bit -> id ^ "_" ^ string_of_int bit)
+              (fun bit -> (input 0) ^ "_" ^ string_of_int bit)
+              (fun bit -> (input 1) ^ "_" ^ string_of_int bit) (w - 1) 0
 
       | Sub    w ->
           let rec sub bit =
@@ -215,8 +212,38 @@ let rec output_scope_item scope_item =
           let _ = sub (w - 1) in
           ()
 
-      | Mul    w -> raise (Invalid_argument "multiply not supported")
+      | Mul    w ->
+          write ("-- mul " ^ id ^ " = " ^ input 0 ^ " * " ^ input 1);
+          let rec f1 a =
+            let rec f2 a b =
+              if a >= 0 then begin
+                write ("DEFINE " ^ id ^ "_bitand_" ^ string_of_int a ^ "_" ^ string_of_int b ^ " := " ^ input 0 ^ "_" ^ string_of_int a ^ " & " ^ input 1 ^ "_" ^ string_of_int b ^ ";");
+                f2 (a - 1) (b + 1)
+              end
+            in
+            if a >= 0 then begin
+              f2 a 0;
+              f1 (a - 1)
+            end
+          in
+          f1 (w - 1);
 
+          let rec accum label bit_a =
+            let bit = "_" ^ string_of_int bit_a in
+            write ("DEFINE " ^ id ^ bit ^ " := " ^ label ^ bit ^ ";");
+            let bit_a = bit_a + 1 in
+            let bit_a_str = "_" ^ string_of_int bit_a in
+            if bit_a < w then begin
+              let new_label = id ^ "_accum" ^ bit_a_str in
+              add (fun bit -> new_label ^ "_" ^ string_of_int bit)
+                  (fun bit -> label ^ "_" ^ string_of_int bit)
+                  (fun bit -> id ^ "_bitand" ^ bit_a_str ^ "_" ^ string_of_int (bit - bit_a))
+                  (w - 1) bit_a;
+              accum new_label bit_a
+            end
+          in
+          accum (id ^ "_bitand_0") 0 
+            
       | Mux    w ->
           write ("-- mux");
           (*
