@@ -46,6 +46,16 @@ let iter count func =
   done
 ;;
 
+let join count func delimiter =
+  let rec f bit str =
+    if bit >= count then
+      str
+    else
+      f (bit + 1) (str ^ delimiter ^ func ("_" ^ string_of_int bit))
+  in
+    f 1 (func "_0")
+;;
+    
 let if_expr pred on_true on_false =
   "case " ^ pred ^ " : " ^ on_true ^ "; 1 : " ^ on_false ^ "; esac"
 ;;
@@ -103,7 +113,8 @@ let rec output_scope_item scope_item =
           )
 
       | Output (name, w) ->
-          write ("-- output " ^ name ^ " " ^ input 0)
+          write ("-- output " ^ name ^ " " ^ input 0);
+          write ("SPEC AG " ^ join w (fun bit -> input 0 ^ bit) " | " ^ ";")
 
       | Name   (name, w) ->
           write ("-- name " ^ name ^ " " ^ input 0)
