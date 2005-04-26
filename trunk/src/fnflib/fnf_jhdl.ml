@@ -217,6 +217,8 @@ let rec output_logic scope_item =
 	  write ("    //Ffc: " ^ id);
 	  write ("      regr_o(" ^ input 1 ^ ", " ^ input 2 ^ ", " ^ input 0 ^ ", " ^ id ^ ", \"Ffc_" ^ id ^ "\");")
 
+      | Bbox _ -> raise (Invalid_argument "Black-boxes not supported in JHDL code generation.")
+
       )
 ;;
 

@@ -281,6 +281,8 @@ let rec output_scope_item scope_item =
             write ("ASSIGN init(" ^ id ^ bit ^ ") := 0;");
             write ("ASSIGN next(" ^ id ^ bit ^ ") := " ^ if_expr (clear ^ " & ! " ^ clear_state) "0" (if_expr (clock ^ " & ! " ^ clock_state) (input 2 ^ bit) (id ^ bit)) ^ ";");
           )
+
+        | Bbox _ -> raise (Invalid_argument "Black-boxes not supported in NuSMV code generation.")
       )
 ;;
 

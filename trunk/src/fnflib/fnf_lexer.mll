@@ -63,6 +63,7 @@ rule token = parse
   | "mux"                { Fnf_parser.Mux                 (Parser_util.next_lex lexbuf) }
   | "ff"                 { Fnf_parser.Ff                  (Parser_util.next_lex lexbuf) }
   | "ffc"                { Fnf_parser.Ffc                 (Parser_util.next_lex lexbuf) }
+  | "bbox"               { Fnf_parser.Bbox                (Parser_util.next_lex lexbuf) }
 
   | integer              { Fnf_parser.Integer             (Parser_util.next_lex lexbuf) }
 

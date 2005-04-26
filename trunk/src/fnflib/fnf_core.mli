@@ -49,6 +49,7 @@ type cell_info = Input  of string * int
                | Mux    of int
                | Ff     of int
                | Ffc    of int
+               | Bbox   of string * int * int * int list
 ;;
 
 type item = Scope of scope | Cell of cell;;
@@ -118,4 +119,5 @@ val create_mul    : scope -> int -> cell * port * port;;
 val create_mux    : scope -> int -> cell * port * port * port;;
 val create_ff     : scope -> int -> cell * port * port;;
 val create_ffc    : scope -> int -> cell * port * port * port;;
+val create_bbox   : scope -> string -> int -> int -> int list -> cell * port;;
 

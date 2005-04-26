@@ -117,6 +117,7 @@ let connect_ports () =
 %token <string * (string * int * int)> Mux
 %token <string * (string * int * int)> Ff
 %token <string * (string * int * int)> Ffc
+%token <string * (string * int * int)> Bbox
 %token <string * (string * int * int)> Integer
 %token <string * (string * int * int)> String
 %token <string * (string * int * int)> EOF
@@ -157,6 +158,14 @@ integer
   : Integer { int_of_string (fst $1) }
   ;
 
+integers_0
+  :                    { [] }
+  | integers_0 integer { $2 :: $1 }
+  ;
+
+integers
+  : integers_0 { List.rev $1 }
+
 width
   : integer { $1 }
   ;
@@ -194,6 +203,8 @@ cell
   | Parenl Mux    id width id id id              Parenr  { let cell, select, data_0, data_1 = create_mux (current_scope ()) $4 in add_cell $3 cell; add_port select $5; add_port data_0 $6; add_port data_1 $7 }
   | Parenl Ff     id width id id                 Parenr  { let cell, clock, data = create_ff   (current_scope ()) $4 in add_cell $3 cell; add_port clock $5; add_port data $6 }
   | Parenl Ffc    id width id id id              Parenr  { let cell, clear, clock, data = create_ffc (current_scope ()) $4 in add_cell $3 cell; add_port clear $5; add_port clock $6; add_port data $7 }
+  | Parenl Bbox   id string width width Parenl integers Parenr id Parenr
+    { let cell, data = create_bbox (current_scope ()) $4 $5 $6 $8 in add_cell $3 cell; add_port data $10 }
   ;
 
 %%

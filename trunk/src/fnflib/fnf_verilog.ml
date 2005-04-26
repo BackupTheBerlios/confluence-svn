@@ -70,6 +70,7 @@ let rec output_scope_item scope_item =
       | Mux    w         -> assign cell (input 0 ^ " ? " ^ input 2 ^ " : " ^ input 1)
       | Ff     w         -> write ("  always @ (posedge " ^ input 0 ^ ") " ^ id ^ " <= " ^ input 1 ^ ";")
       | Ffc    w         -> write ("  always @ (posedge " ^ input 0 ^ " or posedge " ^ input 1 ^ ") if (" ^ input 0 ^ ") " ^ id ^ " <= {" ^ string_of_int w ^ "{1'b0}}; else " ^ id ^ " <= " ^ input 2 ^ ";")
+      | Bbox (n, wo, wi, p) -> write ("  " ^ n ^ " #(" ^ String2.join (List.map string_of_int (wo :: wi :: p)) ", " ^ ") " ^ id ^ "_i (" ^ id ^ ", " ^ input 0 ^ ");")
       )
 ;;
 

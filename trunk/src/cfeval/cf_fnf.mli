@@ -60,10 +60,11 @@ val new_mul         : system -> producer -> producer -> producer;;
 val new_mux         : system -> producer -> producer -> producer -> producer;;
 
 
-(** Stateful Primitives: First call newStateful, then call specific. *)
+(** Stateful Primitives: First call new_state, then call specific. *)
 
 val new_state       : system -> int -> producer;;
 val new_reg         : system -> producer -> producer -> unit;;
+val new_bbox        : system -> string -> int list -> producer -> producer -> unit;;
 
 
 (** Code Generator *)

@@ -330,5 +330,22 @@ let new_reg system data_in data_out =
   connect reg (port_of_cell data_out 0);
   statefuls := Reg (system, clk, rst, enb) :: !statefuls
 ;;
+
+let new_bbox system name params data_in data_out =
+  let scope = scope_of_system system in
+  let width_in = width_of_cell data_in in
+  let ecat, enb, ecat_data = create_concat scope 1 width_in in
+  let rcat, rst, rcat_data = create_concat scope 1 (width_in + 1) in
+  let ccat, clk, ccat_data = create_concat scope 1 (width_in + 2) in
+  let bbox, bbox_data = create_bbox scope name (width_of_cell data_out) (width_in + 3) params in
+  connect data_in ecat_data;
+  connect ecat    rcat_data;
+  connect rcat    ccat_data;
+  connect ccat    bbox_data;
+  connect bbox    (port_of_cell data_out 0);
+  statefuls := Reg (system, clk, rst, enb) :: !statefuls;
+;;
+    
+
     
 

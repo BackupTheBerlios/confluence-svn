@@ -97,6 +97,9 @@ let rec output_scope_item scope_item =
                             write ("      " ^ id ^ " <= " ^ input 2 ^ ";");
                             write ("    end if;");
                             write ("  end process;")
+      | Bbox (n, wo, wi, p) ->
+          write ("  " ^ id ^ "_i : entity " ^ n ^ " generic map (" ^ String2.join (List.map string_of_int (wo :: wi :: p)) ", " ^ ") port map (" ^ id ^ "_t, unsigned(" ^ input 0 ^ "));");
+          write ("  " ^ id ^ " <= unsigned(" ^ id ^ "_t);")
       )
 ;;
 
@@ -148,6 +151,11 @@ let rec output_local_declarations scope_item =
           write ("  signal " ^ id_of_cell cell ^ "_clr : std_logic;");
           write ("  signal " ^ id_of_cell cell ^ "_clk : std_logic;");
           write ("  signal " ^ id_of_cell cell ^ " : unsigned(" ^ string_of_int (width_of_cell cell - 1) ^ " downto 0);") 
+
+      | Bbox (_, wo, _, _) ->
+          write ("  signal " ^ id_of_cell cell ^ " : unsigned(" ^ string_of_int (width_of_cell cell - 1) ^ " downto 0);");
+          write ("  signal " ^ id_of_cell cell ^ "_t : std_logic_vector(" ^ string_of_int (width_of_cell cell - 1) ^ " downto 0);") 
+
       | _ ->
           write ("  signal " ^ id_of_cell cell ^ " : unsigned(" ^ string_of_int (width_of_cell cell - 1) ^ " downto 0);") 
       )

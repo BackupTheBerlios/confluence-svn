@@ -84,6 +84,7 @@ and  cell_info = Input  of string * int
                | Mux    of int
                | Ff     of int
                | Ffc    of int
+               | Bbox   of string * int * int * int list
 ;;
 
 
@@ -300,6 +301,7 @@ let name_of_cell cell =
       | Mux    _ -> "mux"
       | Ff     _ -> "ff"
       | Ffc    _ -> "ffc"
+      | Bbox   _ -> "bbox"
 ;;
 
 (** Output width of a cell. *)
@@ -325,6 +327,7 @@ let width_of_cell cell =
   | Mux    w
   | Ff     w
   | Ffc    w -> w
+  | Bbox   (_, w, _, _) -> w
 ;;
 
 (** Input width of a cell port. *)
@@ -355,6 +358,8 @@ let width_of_port (cell, port_num) =
 
   | Ff     w -> if port_num = 0 then 1 else if port_num = 1 then w else raise Invalid_port_number
   | Ffc    w -> if port_num = 0 || port_num = 1 then 1 else if port_num = 2 then w else raise Invalid_port_number
+
+  | Bbox (_, _, w, _) -> if port_num = 0 then w else raise Invalid_port_number
 ;;
 
 (** The number of input ports of a cell. *)
@@ -384,6 +389,8 @@ let arity_of_cell cell =
 
   | Ff     _ -> 2
   | Ffc    _ -> 3
+
+  | Bbox   _ -> 1
 ;;
 
 
@@ -570,6 +577,12 @@ let create_ff scope width =
 let create_ffc scope width =
   let cell = add_new_cell scope (Ffc width) 3 in
   cell, (cell, 0), (cell, 1), (cell, 2)
+;;
+
+(** Creates an black box. *)
+let create_bbox scope name width_out width_in parameters =
+  let cell = add_new_cell scope (Bbox (name, width_out, width_in, parameters)) 1 in
+  cell, (cell, 0)
 ;;
 
 

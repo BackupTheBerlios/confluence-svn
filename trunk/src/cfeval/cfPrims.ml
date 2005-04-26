@@ -277,6 +277,7 @@ type prim =
   | VectorExtSoft
   *)
   | VectorReg
+  | VectorBbox
   (*
   | VectorRom
   | VectorRam
@@ -388,6 +389,7 @@ let totalArity prim =
   | VectorExtSoft   -> 4
   *)
   | VectorReg       -> 3
+  | VectorBbox      -> 5
   (*
   | VectorRom       -> 4
   | VectorRam       -> 4
@@ -499,6 +501,7 @@ let toString prim =
   | VectorExtSoft   -> "VectorExtSoft"
   *)
   | VectorReg       -> "VectorReg"
+  | VectorBbox      -> "VectorBbox"
   (*
   | VectorRom       -> "VectorRom"
   | VectorRam       -> "VectorRam"
@@ -608,7 +611,8 @@ let fromString name =
   | "VectorExtSequ" -> VectorExtSequ
   | "VectorExtSoft" -> VectorExtSoft
   *)
-  | "VectorReg"   -> VectorReg
+  | "VectorReg"    -> VectorReg
+  | "VectorBbox"   -> VectorBbox
   (*
   | "VectorRom"   -> VectorRom
   | "VectorRam"      -> VectorRam
@@ -1037,6 +1041,31 @@ let vectorRegStmt renv =
   CfTypes.slotVariableStrict slot width
 ;;
 
+let vectorBboxStmt renv =
+  let sysId = CfTypes.getEnvId renv in
+  let ports = CfTypes.getRenvValues renv in
+  let name    = ports.(0) in
+  let width   = ports.(1) in
+  let params  = ports.(2) in
+  let dataIn  = ports.(3) in
+  let dataOut = ports.(4) in
+  CfTypes.setVariableDependence dataOut [name; width; params; dataIn];
+  let slot = CfTypes.newSlot renv 1 (fun () ->
+    let width = CfTypes.getInt width in
+    CfTypes.unify dataOut (CfTypes.newVector (Cf_fnf.new_state sysId width));
+    CfTypes.checkWidthNotZero dataOut;
+    let slot = CfTypes.newSlot renv 3 (fun () ->
+      CfTypes.checkWidthNotZero dataIn;
+      Cf_fnf.new_bbox sysId (CfTypes.listToString name) (CfTypes.listToIntList params) (CfTypes.getProducer dataIn) (CfTypes.getProducer dataOut);
+    ) in
+    CfTypes.slotVariableStrict slot name;
+    CfTypes.slotVariableStrict slot params;
+    CfTypes.slotVariableStrict slot dataIn
+  ) in
+  CfTypes.slotVariableStrict slot width
+;;
+
+
 (*
 let bits a =
   if a < 0 then raise (CfTypes.Error "Bits: Count must be >= 0.")
@@ -1267,6 +1296,7 @@ let compilePrimitive primName arity =
         | VectorExtSoft     -> stmt_of_prim_rsslx  vectorExtSoft
         *)
         | VectorReg         -> vectorRegStmt
+        | VectorBbox        -> vectorBboxStmt
         (*
         | VectorRom         -> vectorRomStmt
         | VectorRam         -> vectorRamStmt

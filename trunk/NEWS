@@ -9,6 +9,14 @@ Release Notes
 
 
 ------------------------------------------------------------------------
+Confluence 0.10.5 -- 04/26/2005
+
+  - Blackbox support in Confluence and FNF:
+  
+      {bbox module_name output_width param_list in out}
+      
+
+------------------------------------------------------------------------
 Confluence 0.10.4 -- 03/23/2005
 
   - The FNF NuSMV code generator turns output vectors into assertions.

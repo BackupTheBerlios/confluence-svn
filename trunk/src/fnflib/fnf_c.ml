@@ -98,6 +98,8 @@ let allocate_cell cell =
 
   | Dangle ->
       add_cell_index cell 0  (* So it doesn't raise an error it the calc phase. *)
+
+  | Bbox _ -> raise (Invalid_argument "Black-boxes not supported in C code generation.")
 ;;
   
 let channel_c = ref stdout;;
@@ -568,6 +570,8 @@ let calc_cell cell =
 
   | Ffc    w ->
       write_fnf_func "fnf_ffc" [words_of_width w; mem_input 0; mem_input 1; mem_index]
+
+  | Bbox _ -> raise (Invalid_argument "Black-boxes not supported in C code generation.")
 ;;
 
 let reg_update_cell cell =

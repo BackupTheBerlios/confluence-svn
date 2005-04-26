@@ -186,6 +186,7 @@ ones
 zero
 reg
 regs
+bbox
 rom
 ram_wbr
 ram_rbw
@@ -933,6 +934,11 @@ component regs +width_ +depth +in -out is
   else
     {regs width_ (depth - 1) {reg width_ in $} out}
   end
+end
+
+(** Creates a black box. *)
+component bbox +name +wid +params +in -out is
+  {prim VectorBbox a b c d x end name wid params in out}
 end
 
 (** Creates a ROM given a data width, list of values, and an address vector. *)

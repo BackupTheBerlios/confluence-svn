@@ -81,6 +81,7 @@ let rec output_scope_item scope_item =
       | Mux    w         -> write ("(mux    " ^ id ^ string_of_int w ^ inputs ^ ")")
       | Ff     w         -> write ("(ff     " ^ id ^ string_of_int w ^ inputs ^ ")")
       | Ffc    w         -> write ("(ffc    " ^ id ^ string_of_int w ^ inputs ^ ")")
+      | Bbox (n, wo, wi, p) -> write ("(bbox   " ^ id ^ format_string n ^ " " ^ string_of_int wo ^ " " ^ string_of_int wi ^ " (" ^ String2.join (List.map string_of_int p) " " ^ ")" ^ inputs ^ ")")
       )
 ;;
 
